@@ -74,7 +74,7 @@ class PrioritizingAgent(object):
         try:
             self._priorities[p] = value
         except KeyError:
-            # log
+            # TODO: log
             raise
     
     # Weighted average of priority values

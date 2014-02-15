@@ -59,7 +59,7 @@ class GridStructure:
         self.set_neighborhood_type(neighborhood_type)
             
     def set_neighborhood_type(self, neighborhood_type):
-        try
+        try:
             self.neighborhood = {
                 "von_neumann":    self.neighborhood_von_neumann,
                 "moore":          self.neighborhood_moore

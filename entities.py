@@ -8,10 +8,13 @@ from agent import CommunicatingAgent, PrioritizingAgent
 #                                           spot from the map
 
 class Fisherman(CommunicatingAgent, PrioritizingAgent):
-    def __init__(self):
+    def __init__(self, priorities=None):
         super(Fisherman, self).__init__()
         self._state = 0
         self._slot_knowledge = set([])
+        if not priorities is None:
+            for p, v in priorities:
+                self.set_priority(p, v)
 
     def add_knowledge(self, info):
         self._slot_knowledge.add(info)

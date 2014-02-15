@@ -17,13 +17,16 @@ def setup_config():
 
 def main():
     setup_config()
+    simulate()
+    return 0
+    
+def simulate():
     structure = cfg['world']['structure']
     gs = world.GridStructure(structure['width'], structure['height'])
     fishermen = [entities.Fisherman() for _ in xrange(cfg['fisherman']['num'])]
     gs.populate_evenly([world.Slot(a) for a in fishermen])
     x, y = gs.get_occupant_position(fishermen[0])
     print([str(e) for e in gs.neighborhood(x, y)])
-    return 0
 
 
 if __name__ == "__main__":
