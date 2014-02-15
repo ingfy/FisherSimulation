@@ -116,27 +116,3 @@ class PopulationHappiness(Priority):
     # Calculate the median happiness of agents
     def calculate_value(self, influences):
         return numpy.median([a.get_priorities_satisfaction() for a in influences.agents])
-		
-		
-priority_types = [
-    OwnProfits, 
-    CommunityWealth, 
-    SalmonPrice, 
-    WildFishPrice, 
-    FishingIndustryExisting, 
-    NaturalFishHealth, 
-    AquacultureIndustryExisting, 
-    NonintrusiveAquaculture,
-    PopulationHappiness
-]
-
-string_to_class = {c.__name__ : c for c in priority_types}
-
-class NonexistingPriorityException(Exception): pass
-
-def from_string(str):
-    try:
-        return string_to_class[str]
-    except NameError:
-        # TODO: log
-        raise NonexistingPriorityException("No such priority: %s" % str)

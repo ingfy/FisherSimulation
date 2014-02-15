@@ -25,7 +25,7 @@
             "AquacultureIndustryExisting":   1.0
         }
     },
-    "civilians": {
+    "civilian": {
         "num": 100,
         "priorities": {
             "CommunityWealth":               4.0,
@@ -34,7 +34,7 @@
             "NonintrusiveAquaculture":       1.0
         }
     },
-    "tourists": {
+    "tourist": {
         "num": 30,
         "priorities": {
             "CommunityWealth":               1.0,
