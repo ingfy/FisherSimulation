@@ -9,7 +9,6 @@ cfg = None
 
 ## Simulation MAIN module ##
 
-
 def setup_config():
     ## handle varargs
     global cfg
@@ -18,16 +17,18 @@ def setup_config():
 def main():
     setup_config()
     simulate()
-    return 0
+    return 0    
     
-def simulate():
+class MissingConfigurationException(Exception): pass
+    
+def simulate(callback=None):
+    if cfg is None:
+        raise MissingConfigurationException("Configuration not instantiated. Run setup_config()")
     structure = cfg['world']['structure']
     gs = world.GridStructure(structure['width'], structure['height'])
     fishermen = [entities.Fisherman() for _ in xrange(cfg['fisherman']['num'])]
     gs.populate_evenly([world.Slot(a) for a in fishermen])
     x, y = gs.get_occupant_position(fishermen[0])
-    print([str(e) for e in gs.neighborhood(x, y)])
-
 
 if __name__ == "__main__":
     sys.exit(main())
