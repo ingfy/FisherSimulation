@@ -40,7 +40,7 @@ class CommunityWealth(Priority):
     # Return the average capital of all agents that count as
     # community members.
     def calculate_value(self, influences):
-        members = filter(is_community_member, influences.all_agents)
+        members = [a for a in influences.all_agents if a.is_community_member()]
         return sum([m.get_capital() for m in members])/len(members)
         
 class SalmonPrice(Priority):

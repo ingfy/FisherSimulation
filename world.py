@@ -1,21 +1,46 @@
-class Map:
-    def __init_(self):
-        self.structure = None
+import random
+import entities
+
+class MapTooSmallException(Exception): pass
+
+class Map(object):
+    _structure = None
+    
+    def __init__(self, structure):
+        self.set_structure(structure)
     
     def set_structure(self, structure):
-        self.structure = structure
-
-    def get_a_slot(self):
-        return self.structure.get_a_slot()
-
+        self._structure = structure
+        
+    def get_structure(self):
+        return self._structure
+        
+    def populate_fishermen(self, factory, num):
+        slots = self._structure.get_all_slots()
+        random.shuffle(slots)
+        good = [s for s in slots if s.fish_spawning()]
+        bad  = [s for s in slots if not s.fish_spawning()]
+        if len(good) >= num:
+            for s in good[:num]:
+                s.populate(factory.fisherman())
+        elif len(good) + len(bad) >= num:
+            for s in good + bad[:(num - len(good))]:
+                s.populate(factory.fisherman())            
+        else:
+            raise MapToSmallException(
+                "%d fishermen, but map only contains %d slots" % (num, len(slots)))
+        
+    def get_radius(self, r, pos):
+        return self._structure.get_radius(r, pos)
+        
 # Slot
 #   get_occupant():         returns fisherman if there is one there
 #   populate(agent):        sets the fisherman to the given agent
 #   build_aquaculture():    blocks the slot and kicks out the fisherman
-#   good_fishing():         indicates if the current slot is a good fishing spot
+#   fish_spawning():        indicates if the current slot is a good fishing spot
 # Assume that all occupants can be converted to strings
 
-class Slot:
+class Slot(object):
     def __init__(self, occupant=None):
         self._occupant = occupant
         self._spawning = False
@@ -26,38 +51,34 @@ class Slot:
 
     def is_blocked(self):
         return self._blocked
-    
-    def good_fishing(self):
-        return self.fish_spawning()
+        
+    def set_fish_spawning(self):
+        self._spawning = True
 
     def fish_spawning(self):
-        return not self._blocked and self._spawning
+        return self._spawning
 
     def populate(self, agent):
         self._occupant = agent
 
-    def build_aquaculture(self):
-        self._occupant = None
+    def build_aquaculture(self, agent):
+        self._occupant = agent
         self._blocked = True
 
     def __str__(self):
         surround = "s{%s}" if self._spawning else "s[%s]"
         return surround % (str(self._occupant) if self._occupant is not None else " ")
-
-# General Structure doc:
-#   populate_evenly(agents) :   Assumes that the structure has at
-#                               least as many slots as the number
-#                               of agents passed
-#   __init__(width, height) :   Defines the structure size
-#   size()                  :   Returns the size
-#   neighborhood(x, y)      :   Gets all the agents that neigh-
-#                               bors the given cell. Type of
-#                               neighborhood decided by struct.
-class GridStructure:
-    def __init__(self, width, height, neighborhood_type="von_neumann"):
-        self._slots = [[None for _ in xrange(width)] for _ in xrange(height)]
+        
+# Abstract Structure class
+class AbstractStructure(object):
+    def __init__(self, width, height, cell_size, neighborhood_type="von_neumann"):
+        self._cell_size = cell_size
         self.set_neighborhood_type(neighborhood_type)
-            
+        self.initialize_slots(width, height)
+
+    def initialize_slots(self, width, height):
+        self._slots = [[Slot() for _ in xrange(width)] for _ in xrange(height)]
+
     def set_neighborhood_type(self, neighborhood_type):
         try:
             self.neighborhood = {
@@ -66,46 +87,124 @@ class GridStructure:
             }[neighborhood_type]
         except NameError:
             raise Exception("Undefined neighborhood type")
-
-    def get_a_slot(self):
-        return self._slots[0][0]
-        
-    def coordinates_list(self):
-        # flatten the grid
-        return [(x, y) for y in xrange(0, len(self._slots)) for x in xrange(0, len(self._slots[y]))]
-
-    def populate_evenly(self, agents):
-        # Exception on next when out of bounds
-        iter_agents = iter(agents)
-        num = len(agents)
-        for x, y in self.coordinates_list():
-            self._slots[x][y] = next(iter_agents)
-
-    def size(self):
-        # Assume all rows have the same amount of cells, 
-        # since that's the structure we're working with
-        return (len(self._slots), len(self._slots[0]))
-
-    def in_bounds(self, x, y):
-        w, h = self.size()
-        return w > x >= 0 and h > y >= 0
-
+            
     def get_occupant_position(self, occupant):
-        for x in xrange(len(self._slots)):
-            for y in xrange(len(self._slots[x])):
-                if occupant is self._slots[x][y].get_occupant(): 
-                    return (x, y)
+        for (x, y) in self.get_coordinates_list():
+            if occupant is self._slots[x][y].get_occupant(): 
+                return (x, y)
         return None
+            
+    def get_coordinates_list(self):
+        """ Returns a list of all the coordinates in the structure """
+        return [(x, y) for y in xrange(0, len(self._slots)) for x in xrange(0, len(self._slots[y]))]
+            
+    def get_grid(self):
+        """ Returns all slots as grid corresponding to real-world layout """
+        return self._slots
+
+    def get_radius(self, r, pos):
+        """ Returns all slots in a radius of r meters """
+        raise NotImplementedError
+        
+    def get_size(self):
+        """ Return size in (width, height) format """
+        return (len(self._slots), len(self._slots[0]))
+        
+    def get_all_slots(self):
+        """ Return a list of all the slots """
+        return [self._slots[x][y] for (x, y) in self.get_coordinates_list()]
+        
+    def get_positions_if_valid(self, positions):
+        valid_positions = [(x, y) for (x, y) in positions if self.in_bounds(x, y)]
+        return [self._slots[x][y] for (x, y) in valid_positions]
+        
+    def _get_at_offsets(self, o, x, y):
+        """ Return a list of slots at the given offsets <o> from the point (x, y) """
+        raise NotImplementedError
+        
+    def in_bounds(self, x, y):
+        raise NotImplementedError
+        
+    def neighborhood_von_neumann(self, x, y):
+        raise NotImplementedError
+        
+    def neibhorhood_moore(self, x, y):
+        raise NotImplementedError        
+        
+    def size(self):
+        raise NotImplementedError
+
+# FishingStructure to hold general method for initializing good fishing spots
+class FishingStructure(AbstractStructure):
+    def __init__(self, width, height, cell_size, good_spot_frequency, neighborhood_type="von_neumann"):
+        AbstractStructure.__init__(self, width, height, cell_size, neighborhood_type)
+        self.initialize_fishing_spots(good_spot_frequency)
+
+    def initialize_fishing_spots(self, good_spot_frequency):
+        slots = self.get_all_slots()
+        num_slots = len(slots)
+        num_good_spots = good_spot_frequency * num_slots
+        for s in random.sample(slots, int(num_good_spots)):
+            s.set_fish_spawning()        
+
+# GridStructure doc:
+#   populate_evenly(agents) :   Assumes that the structure has at
+#                               least as many slots as the number
+#                               of agents passed
+#   __init__(width, height) :   Defines the structure size
+#   size()                  :   Returns the size
+#   neighborhood(x, y)      :   Gets all the agents that neighbors
+#                               the given cell. Type of
+#                               neighborhood decided by structure.
+class GridStructure(FishingStructure):
+    def in_bounds(self, x, y):
+        w, h = self.get_size()
+        return w > x >= 0 and h > y >= 0
+        
+    def get_radius(self, r, (x, y)):
+        sx, sy = self._cell_size
+        offsets = [e for subl in [
+            [(  0, yy), (  0, -yy), 
+             ( xx, 0),  ( xx,  yy), ( xx, -yy),
+             (-xx, 0),  (-xx,  yy), (-xx, -yy)] for 
+                xx in xrange(1, r/sx + 1) for 
+                yy in xrange(1, r/sy + 1)] for e in subl]  
+        return self._get_at_offsets(offsets, x, y)
+            
+    def _get_at_offsets(self, o, x, y):
+        return self.get_positions_if_valid([(x + X, y + Y) for (X, Y) in o])
 
     def neighborhood_moore(self, x, y):
-        d = [(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)]
-        return self.get_positions_if_valid([(x + X, y + Y) for (X,Y) in d])
+        return self._get_at_offsets([(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)])
 
     def neighborhood_von_neumann(self, x, y):
-        d = [(1,0),(0,1),(-1,0),(0,-1)]
-        return self.get_positions_if_valid([(x + X, y + Y) for (X,Y) in d])
-    
-    def get_positions_if_valid(self, positions):
-        valid_positions = filter(lambda (x,y): self.in_bounds(x,y), positions)
-        return [self._slots[x][y] for (x,y) in valid_positions]
+        return self._get_at_offsets([(1,0),(0,1),(-1,0),(0,-1)])
 
+# TorusStructure represents a kind of grid structure that wraps around both
+# horizontally and vertically. That means the neighborhood and radius
+# methods are different from GridStructure.
+class TorusStructure(GridStructure):
+    def _absolute(self, x, y):
+        w, h = self.get_size()
+        return (x % w, y % h)
+    
+    def get_radius(self, r, (x, y)):
+        sx, sy = self._cell_size
+        # In each direction
+        offsets = [e for subl in [
+            [(  0, yy), (  0, -yy), 
+             ( xx, 0),  ( xx,  yy), ( xx, -yy),
+             (-xx, 0),  (-xx,  yy), (-xx, -yy)] for 
+                xx in xrange(1, r/sx + 1) for 
+                yy in xrange(1, r/sy + 1)] for e in subl]        
+        return self._get_at_offsets(offsets, x, y)
+        
+    def neighborhood_moore(self, x, y):
+        return self._get_at_offsets([(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)])
+            
+    def neighborhood_moore(self, x, y):
+        return self._get_at_offsets([(1,0),(0,1),(-1,0),(0,-1)])
+            
+    def _get_at_offsets(self, o, x, y):
+        return [self._slots[X][Y] for (X, Y) in
+            [self._absolute(x + xx, y + yy) for (xx, yy) in o]]

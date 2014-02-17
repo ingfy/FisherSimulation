@@ -28,9 +28,9 @@ class CommunicatingAgent(IdentifyingAgent):
     # Registers the agents to the directory, storing the directory
     # in the agent, and giving its own identifier away to the 
     # directory so it can be looked up later.
-    def register(self, directory):
+    def register(self, directory, type=None):
         self._directory = directory
-        directory.register_communicating_agent(self)
+        directory.register_communicating_agent(self, type)
     
     def get_directory(self):
         if self._directory is not None:
@@ -56,6 +56,9 @@ class CommunicatingAgent(IdentifyingAgent):
             contents: message
         })
         self.react_to_message(sender, message)        
+        
+    def react_to_message(self, sender, message):
+        raise NotImplementedError
         
 class PrioritizingAgent(object):
     _priorities = {

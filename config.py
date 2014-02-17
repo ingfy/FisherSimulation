@@ -3,8 +3,8 @@ import priorityutil
 
 cfg_json_filename = 'config.js'
 
-def load(varargs = None):
-    with open(cfg_json_filename, 'r') as f:
+def load(varargs = None, filename = cfg_json_filename):
+    with open(filename, 'r') as f:
         return convert_priorities(json.load(f))
 
 def convert_priorities(cfg):

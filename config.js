@@ -2,8 +2,11 @@
     "world": {
         "structure": {
             "type": "grid",
-            "width": 5,
-            "height": 5
+            "width": 20,
+            "height": 20,
+            "good_spot_frequency": 0.1,
+            "cell_width": 25,
+            "cell_height": 25
         }
     },
     "fisherman": {

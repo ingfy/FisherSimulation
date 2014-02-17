@@ -1,20 +1,39 @@
 import wx
 import worldmap
 import threading
-import main
+import interface
+import simulation
+import time
 
-class SimulationThread(threading.Thread):
-    def __init__(self, notify_window):
+class BackendThread(threading.Thread):
+    def __init__(self, callback):
         threading.Thread.__init__(self)
-        self._notify_window = notify_window
+        self._callback = callback
         self._want_abort = False
-    
-    def run(self):
-        pass
-        wx.PostEvent(self._notify_window, ResultEvent(0))
+        self.start_interface()
         
+    def start_interface(self):
+        self._interface = interface.Interface()
+        
+    def loop(self):
+        while not self._want_abort:            
+            time.sleep(0.1)    
+    
+    def run(self):        
+        self._interface.setup_config()       # TODO: Move to configuration screen
+        self._interface.start_simulation()
+        self.loop()
+        
+    def stop(self):
+        self._callback(0)
+        
+    # Interface methods
     def abort(self):
+        self._interface.abort()
         self._want_abort = True
+        
+    def get_map(self):
+        return self._interface.get_map()
 
 # Button definitions
 ID_START = wx.NewId()
@@ -50,9 +69,9 @@ class Window(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnStop, self.stopButton)
         
         # World graphic
-        graphics = worldmap.WorldMap(self)        
+        self._graphics = worldmap.WorldMap(self)        
         self.graphics_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.graphics_sizer.Add(graphics, 1, wx.EXPAND)
+        self.graphics_sizer.Add(self._graphics, 1, wx.EXPAND)
         
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer.Add(self.controls_sizer, 0, wx.EXPAND)
@@ -62,10 +81,14 @@ class Window(wx.Frame):
         self.SetSizerAndFit(self.sizer)
         
         # Set up event handler for any worker thread results
-        EVT_RESULT(self,self.OnResult)
+        EVT_RESULT(self, self.OnResult)
         
-        self.simulation_thread = None
+        # Set up close event so timer is properly stopped
+        wx.EVT_CLOSE(self, self.OnClose)
         
+        self._backend = None
+        
+        self.reset_buttons()
         self.Show()
         
     # Helper methods
@@ -75,16 +98,18 @@ class Window(wx.Frame):
     
     def reset_buttons(self):
         self.stopButton.Disable()
-        self.startButton.Enable()
-        
+        self.startButton.Enable()        
         
     # Event Methods
     def OnStart(self, event):
         self.set_buttons_running()
-        self.simulation_thread = SimulationThread(self)
-        self.simulation_thread.start()
+        self._backend = BackendThread(lambda r: wx.PostEvent(self, ResultEvent(r)))
+        self._backend.start()
+        self._graphics.start(self._backend)
         
     def OnStop(self, event):
+        self._backend.abort()
+        self._graphics.stop_timer()
         self.reset_buttons()
         
     def OnResult(self, event):
@@ -93,9 +118,15 @@ class Window(wx.Frame):
             print("Simulation aborted")
         else:
             print("Simulation finished")
+            
+    def OnClose(self, event):
+        self._graphics.stop_timer()
+        if not self._backend is None:
+            self._backend.abort()
+        self.Destroy()
         
-def create_and_run():
-    app = wx.App(False)
+def create_and_run():    
+    app = wx.App(redirect=False)
     Window(None, "Fisherman Simulation")
     app.MainLoop()
     
@@ -103,5 +134,5 @@ def main():
     create_and_run()
     return 0
     
-if __name__ == "__main__":
+if __name__ == "__main__":    
     exit(main())
