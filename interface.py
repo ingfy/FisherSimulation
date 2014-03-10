@@ -43,11 +43,13 @@ class Slot(object):
         spawning        Boolean
         aquaculture     Boolean
         fisherman       Boolean
+        land            Boolean
     """
-    def __init__(self, spawning, aquaculture, fisherman):
+    def __init__(self, spawning, aquaculture, fisherman, land):
         self.spawning = spawning
         self.aquaculture = aquaculture
         self.fisherman = fisherman
+        self.land = land
         
     @classmethod
     def from_world_slot(c, world_slot):
@@ -55,5 +57,6 @@ class Slot(object):
         return c(
             world_slot.fish_spawning(),
             occupant is not None and occupant.__class__ is entities.Aquaculture,
-            occupant is not None and occupant.__class__ is entities.Fisherman
+            occupant is not None and occupant.__class__ is entities.Fisherman,
+            world_slot.is_land()
         )

@@ -1,16 +1,17 @@
 import wx
+import math
+from BufferedCanvas import BufferedCanvas
 
-class WorldMap(wx.Panel):
-    size = (400, 400)
-    _data = None
-    BufferBmp = None
-    timer = None
-
+class WorldMap(BufferedCanvas):
     def __init__(self, parent):
-        wx.Panel.__init__(self, parent, size = self.size)
+        self._size = (600, 600)
+        self._data = None
+        BufferedCanvas.__init__(self, parent, size = self._size)        
         self.SetBackgroundColour("white")
         
-        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.BufferBmp = None
+        self.timer = None
+        self.update()
         
     def start(self, backend):
         self.backend = backend
@@ -22,21 +23,17 @@ class WorldMap(wx.Panel):
     # Event methods    
     def OnUpdate(self, event):        
         self._data = { "map": self.backend.get_map() }
-        self.Refresh(eraseBackground=False)
-        self.Update()
+        self.update()
         
-    def OnPaint(self, event):
-        dc = wx.PaintDC(self)
-        self.DoDraw(dc)
-        
-    def DoDraw(self, dc):
+    def draw(self, dc):
+        dc.Clear()
+        dc.SetBackground(wx.Brush(wx.Colour(255, 255, 255), wx.SOLID))
         if self._data is None: return
         try:
-            dc.Clear()            
             map = self._data["map"]
             num_hor, num_ver = (len(map.grid), len(map.grid[0]))
-            w, h = self.size
-            cell_w, cell_h = (w / num_hor, h / num_hor)
+            w, h = self.GetSize()
+            cell_w, cell_h = (float(w) / num_hor, float(h) / num_hor)
             
             grid_color = wx.Colour(0, 0, 0)
             dc.SetPen(wx.Pen(grid_color, 1))
@@ -44,11 +41,11 @@ class WorldMap(wx.Panel):
             # Draw grid
             ## Horizontal lines
             for x in xrange(num_hor + 1):
-                dc.DrawLine(0, cell_w * x, h, cell_w * x)
+                dc.DrawLine(cell_w * x, 0, cell_w * x, h)
             
             ## Vertical lines
             for y in xrange(num_ver + 1):
-                dc.DrawLine(cell_h * y, 0, cell_h * y, w) 
+                dc.DrawLine(0, cell_h * y, w, cell_h * y) 
             
             
             fish_color = wx.Colour(0, 0, 255)
@@ -59,6 +56,15 @@ class WorldMap(wx.Panel):
             boat_pen = wx.Pen(boat_color, 1)
             boat_brush = wx.Brush(boat_color, wx.SOLID)
             
+            aquaculture_border_color = wx.Colour(0, 0, 0)
+            aquaculture_fill_color = wx.Colour(200, 200, 200)
+            aquaculture_pen = wx.Pen(aquaculture_border_color, 1)
+            aquaculture_brush = wx.Brush(aquaculture_fill_color, wx.SOLID)
+            
+            land_color = wx.Colour(0, 255, 0)
+            land_len = wx.Pen(land_color, 1)
+            land_brush = wx.Brush(land_color, wx.SOLID)
+            
             # Draw entities
             for i in xrange(num_hor):
                 for j in xrange(num_ver):
@@ -67,6 +73,10 @@ class WorldMap(wx.Panel):
                         draw_fish_top_left(dc, x, y, cell_w, cell_h, fish_pen, fish_brush)
                     if map.grid[i][j].fisherman:
                         draw_boat_bottom_right(dc, x, y, cell_w, cell_h, boat_pen, boat_brush)
+                    if map.grid[i][j].aquaculture:
+                        draw_aquaculture_center(dc, x + cell_w / 2, y + cell_h / 2, cell_w, cell_h, aquaculture_pen, aquaculture_brush)
+                    if map.grid[i][j].land:
+                        draw_land(dc, x, y, cell_w, cell_h, land_pen, land_brush)
             
             
             return True
@@ -79,37 +89,57 @@ class WorldMap(wx.Panel):
         if not self.timer is None:
             self.timer.Stop()
             
+def draw_land(dc, x, y, cell_w, cell_h, p, b):
+    dc.SetPen(p)
+    dc.SetBrush(b)
+    dc.DrawRectangle(x, y, cell_w, cell_h)
+            
+def draw_aquaculture_center(dc, x, y, cell_w, cell_h, p, b):
+    scale = min(cell_w, cell_h)
+    corners = 10
+    dc.SetPen(p)
+    dc.SetBrush(b)
+    points = [wx.Point(
+        x + scale / 2 * math.sin(2 * math.pi * p / corners),
+        y + scale / 2 * math.cos(2 * math.pi * p / corners)
+        ) for p in xrange(corners)]
+    dc.DrawPolygon(points)
+            
           
 def draw_boat_center(dc, x, y, cell_w, cell_h, p, b):
+    scale = min(cell_w, cell_h)
     dc.SetPen(p)
     dc.SetBrush(b)
     # Draw boat bottom
-    dc.DrawArc(x - cell_w / 3, y, x + cell_w / 3, y, x, y)
+    dc.DrawArc(x - scale / 3, y, x + scale / 3, y, x, y)
     # Draw sail
-    dc.DrawPolygon([wx.Point(x - cell_w / 4, y - cell_h / 8),
-                    wx.Point(x + cell_w / 4, y - cell_h / 8),
-                    wx.Point(x,              y - cell_h / 8 - cell_h / 4)])
+    dc.DrawPolygon([wx.Point(x - scale / 4, y - scale / 8),
+                    wx.Point(x + scale / 4, y - scale / 8),
+                    wx.Point(x,              y - scale / 8 - scale / 4)])
     # Draw mast
-    dc.DrawLine(x, y, x, y - cell_h / 8)
+    dc.DrawLine(x, y, x, y - scale / 8)
                     
 def draw_boat_bottom_right(dc, x, y , cell_w, cell_h, p, b):
-    ox = cell_w - cell_w / 3
-    oy = cell_h - cell_h / 8 - cell_h / 4
+    scale = min(cell_w, cell_h)
+    ox = cell_w - scale / 3
+    oy = cell_h - scale / 8 - cell_h / 4
     draw_boat_center(dc, ox + x, oy + y, cell_w, cell_h, p, b)
             
 def draw_fish_center(dc, x, y, cell_w, cell_h, p, b):
+    scale = min(cell_w, cell_h)
     dc.SetPen(p)
     dc.SetBrush(b)
     # Draw body
-    dc.DrawArc(x - cell_w / 3, y, x + cell_w / 3, y, x, y - cell_h / 6)
-    dc.DrawArc(x + cell_w / 3, y, x - cell_w / 3, y, x, y + cell_h / 6)
+    dc.DrawArc(x - scale / 3, y, x + scale / 3, y, x, y - scale / 6)
+    dc.DrawArc(x + scale / 3, y, x - scale / 3, y, x, y + scale / 6)
     ## right tip is located at (x + cell_w / 3, y)
     # Draw tail
-    dc.DrawPolygon([wx.Point(x + cell_w / 3 + cell_w / 5, y - cell_h / 5),
-                    wx.Point(x + cell_w / 3,              y),
-                    wx.Point(x + cell_w / 3 + cell_w / 5, y + cell_h / 5)])
+    dc.DrawPolygon([wx.Point(x + scale / 3 + scale / 5, y - scale / 5),
+                    wx.Point(x + scale / 3,              y),
+                    wx.Point(x + scale / 3 + scale / 5, y + scale / 5)])
         
 def draw_fish_top_left(dc, x, y, cell_w, cell_h, p, b):  # Offset from top left corner
-    ox = cell_w / 3
-    oy = cell_h / 5
+    scale = min(cell_w, cell_h)
+    ox = scale / 3
+    oy = scale / 5
     draw_fish_center(dc, ox + x, oy + y, cell_w, cell_h, p, b)

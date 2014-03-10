@@ -10,11 +10,6 @@ def _is_priority(c):
 priority_types = inspect.getmembers(priority, lambda e: inspect.isclass(e) and _is_priority(e))
 string_to_class = {n : c for (n, c) in priority_types}
 
-class NonexistingPriorityException(Exception): pass
-
 def from_string(str):
-    try:
-        return string_to_class[str]
-    except KeyError:
-        # TODO: log
-        raise NonexistingPriorityException("No such priority: %s" % str)
+    assert str in string_to_class, "Priority %s doesn't exist" % str
+    return string_to_class[str]

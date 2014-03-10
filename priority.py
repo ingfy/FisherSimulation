@@ -41,25 +41,7 @@ class CommunityWealth(Priority):
     # community members.
     def calculate_value(self, influences):
         members = [a for a in influences.all_agents if a.is_community_member()]
-        return sum([m.get_capital() for m in members])/len(members)
-        
-class SalmonPrice(Priority):
-    def __init__(self):
-        super(SalmonPrice, self).__init__("Salmon Price")
-
-    # Assume market has methods:
-    #   get_salmon_price()
-    def calculate_value(self, influences):
-        return influences.market.get_salmon_price()
-        
-class WildFishPrice(Priority):
-    def __init__(self):
-        super(WildFishPrice, self).__init__("Wild Fish Price")
-
-    # Assume market has methods:
-    #   get_wild_fish_price()
-    def calculate_value(self, influences):
-        return influences.market.get_wild_fish_price()
+        return sum([m.get_capital() for m in members])/len(members)    
 
 class FishingIndustryExisting(Priority):
     def __init__(self):
@@ -70,7 +52,7 @@ class FishingIndustryExisting(Priority):
     # Check if fishermen are still fishing or have quit to move on to other things.
     # Return fraction of (original) fishermen that are still fishing.
     def calculate_value(self, influences):
-        return sum([1.0 if f.is_fishing() else 0.0 for f in influences.fishermen])/len(influences.hermen)
+        return sum([1.0 if f.is_fishing() else 0.0 for f in influences.fishermen])/len(influences.fishermen)
         
 class NaturalFishHealth(Priority):
     def __init__(self):

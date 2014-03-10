@@ -1,7 +1,6 @@
 import random
+import math
 import entities
-
-class MapTooSmallException(Exception): pass
 
 class Map(object):
     _structure = None
@@ -20,15 +19,12 @@ class Map(object):
         random.shuffle(slots)
         good = [s for s in slots if s.fish_spawning()]
         bad  = [s for s in slots if not s.fish_spawning()]
-        if len(good) >= num:
-            for s in good[:num]:
-                s.populate(factory.fisherman())
-        elif len(good) + len(bad) >= num:
-            for s in good + bad[:(num - len(good))]:
-                s.populate(factory.fisherman())            
-        else:
-            raise MapToSmallException(
-                "%d fishermen, but map only contains %d slots" % (num, len(slots)))
+        
+        assert num <= len(good) + len(bad), \
+            "%d fishermen, but map only contains %d slots" % (num, len(slots))
+        
+        for s in (good + bad)[:num]:
+            s.populate(factory.fisherman(s))
         
     def get_radius(self, r, pos):
         return self._structure.get_radius(r, pos)
@@ -45,6 +41,8 @@ class Slot(object):
         self._occupant = occupant
         self._spawning = False
         self._blocked = False
+        self._land = False
+        self._fish_quantity = 0.5
 
     def get_occupant(self):
         return self._occupant
@@ -52,8 +50,18 @@ class Slot(object):
     def is_blocked(self):
         return self._blocked
         
+    def is_land(self):
+        return self._land
+        
+    def set_land(self):
+        self._land = True
+        
     def set_fish_spawning(self):
         self._spawning = True
+        self._fish_quantity = 1.0
+        
+    def get_fish_quantity(self):
+        return self._fish_quantity
 
     def fish_spawning(self):
         return self._spawning
@@ -88,11 +96,37 @@ class AbstractStructure(object):
         except NameError:
             raise Exception("Undefined neighborhood type")
             
-    def get_occupant_position(self, occupant):
-        for (x, y) in self.get_coordinates_list():
-            if occupant is self._slots[x][y].get_occupant(): 
+    def get_position(self, fun):
+        for (x, y) in self._get_coordinates_list():
+            if fun(x, y):
                 return (x, y)
-        return None
+        return NOne
+            
+    def get_cell_position(self, cell):
+        return self.get_position(lambda (x, y): cell is self._slots[x][y])
+        
+    def get_occupant_position(self, occupant):
+        return self.get_position(lambda (x, y): occupant is self._slots[x][y].get_occupant())
+        
+    def get_distance(self, (a_x, a_y), (b_x, b_y)):
+        cell_x, cell_y = cell_size
+        return math.sqrt(
+            ((b_x - a_x) * cell_x) ** 2 + 
+            ((b_y - a_y) * cell_y) ** 2
+        )        
+    
+    def get_cell_distance(self, a, b):
+        return self.get_distance(
+            self.get_cell_position(a), 
+            self.get_cell_position(b)
+        )
+                          
+        
+    def get_occupants_distance(self, a, b):
+        return self.get_distance(
+            self.get_occupant_position(a),
+            self.get_occupant_position(b)
+        )
             
     def get_coordinates_list(self):
         """ Returns a list of all the coordinates in the structure """

@@ -1,14 +1,14 @@
 import priority
+import messages
 
 num_agents_created = 0
 
 class IdentifyingAgent(object):
-    _label = None
-
     def __init__(self):
         global num_agents_created
         num_agents_created += 1
         self._created_number = num_agents_created
+        self._label = None
         
     def name(self, label):
         self._label = label
@@ -18,13 +18,8 @@ class IdentifyingAgent(object):
         if self._label is not None:
             return "%s:%s" % (s, self._label)
         return s
-        
-class InvalidDirectoryException(Exception): pass
 
 class CommunicatingAgent(IdentifyingAgent):
-    _message_log = []
-    _directory = None
-    
     # Registers the agents to the directory, storing the directory
     # in the agent, and giving its own identifier away to the 
     # directory so it can be looked up later.
@@ -33,9 +28,8 @@ class CommunicatingAgent(IdentifyingAgent):
         directory.register_communicating_agent(self, type)
     
     def get_directory(self):
-        if self._directory is not None:
-            return self._directory
-        raise InvalidDirectoryException("No directory defined for %s." % self.get_id())
+        assert self._directory is not None, "No directory defined for %s." % self.get_id()
+        return self._directory
         
     def send_message(self, recipient, message):
         self.get_directory().send_message(recipient, message)
@@ -60,25 +54,41 @@ class CommunicatingAgent(IdentifyingAgent):
     def react_to_message(self, sender, message):
         raise NotImplementedError
         
+class VotingAgent(CommunicatingAgent):        
+    def vote_build(self, vote_question):
+        self._vote(vote_question, messages.VoteBuild)
+        
+    def vote_dont_build(self, vote_question):
+        self._vote(vote_question, messages.VoteDontBuild)
+        
+    def ask_for_vote(self, vote_question):
+        # voting decision
+        pass
+                
+    def _vote(self, vote_question, vote):
+        gov = self._directory.get_government()
+        self._directory.send_message(
+            self, 
+            gov, 
+            vote(vote_question.reply(self._directory.get_timestamp()), vote_question)
+        )
+        
 class PrioritizingAgent(object):
-    _priorities = {
-        priority.OwnProfits:                    0.0,
-        priority.CommunityWealth:               0.0,
-        priority.SalmonPrice:                   0.0,
-        priority.WildFishPrice:                 0.0,
-        priority.FishingIndustryExisting:       0.0,
-        priority.NaturalFishHealth:             0.0,
-        priority.AquacultureIndustryExisting:   0.0,
-        priority.NonintrusiveAquaculture:       0.0,
-        priority.PopulationHappiness:           0.0        
-    }
+    def __init__(self):
+        self._priorities = {
+            priority.OwnProfits:                    0.0,
+            priority.CommunityWealth:               0.0,
+            priority.SalmonPrice:                   0.0,
+            priority.WildFishPrice:                 0.0,
+            priority.FishingIndustryExisting:       0.0,
+            priority.NaturalFishHealth:             0.0,
+            priority.AquacultureIndustryExisting:   0.0,
+            priority.NonintrusiveAquaculture:       0.0,
+            priority.PopulationHappiness:           0.0        
+        }
     
-    def set_priority(self, p, value):
-        try:
-            self._priorities[p] = value
-        except KeyError:
-            # TODO: log
-            raise
+    def set_priorities(self, p):
+        self._priorities = p
     
     # Weighted average of priority values
     def get_priorities_satisfaction(self, influences):

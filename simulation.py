@@ -8,12 +8,11 @@ import time
 import threading
 
 ## Simulation MAIN module ##
-class Simulation(threading.Thread):
-    _cfg = None
-    _want_abort = False
-    
+class Simulation():
     def __init__(self):
         threading.Thread.__init__(self)
+        self._cfg = None
+        self._want_abort = False
     
     def setup_config(self, cfg = None):
         self._cfg = config.load(varargs = None)
@@ -21,13 +20,13 @@ class Simulation(threading.Thread):
     def reset(self):
         self._directory = None
         self._map = None
+        self._aquaculture_spawner = None
         
     def get_map(self):
         return self._map
         
     def initialize(self):
-        if self._cfg is None:
-            raise MissingConfigurationException("Configuration not instantiated. Run setup_config()")
+        assert self._cfg is not None, "Configuration not initiated. Run setup_config()"        
         self._directory = directory.Directory()
         self._agent_factory = entities.AgentFactory(self._directory, self._cfg)
         cfg_struct = self._cfg['world']['structure']
@@ -39,18 +38,61 @@ class Simulation(threading.Thread):
         )
         self._map = world.Map(gs)
         self._map.populate_fishermen(self._agent_factory, self._cfg['fisherman']['num'])
+        self._aquaculture_spawner = entities.AquacultureSpawner()
+        self._steps = Steps(self)
+        #self._map.get_structure().get_grid()[10][10].build_aquaculture(self._agent_factory.aquaculture())
+        
+    def abort(self):
+        self._steps.abort()        
+            
+    def new_round(self):
+        pass
+        
+    def start(self):
+        self._steps.start()
+        
+class Steps(threading.Thread):
+    threading.Thread.__init__(self)
+    def __init__(self, simulation):
+        self._simulation = simulation
+        self._current_step = self.start
+        self._want_abort = False
         
     def abort(self):
         self._want_abort = True
         
-    def loop(self):
-        while not self._want_abort:
-            time.sleep(0.1)
-            
-        
     def run(self):
-        print [str(s) for s in self._map.get_radius(100, (4, 4))]
-        self.loop()
+        while not self._want_abort:
+            self.round()
+        
+    def round(self):
+        self.spawn_aquaculture_agent()
+        self.vote()
+        allow = self.government_decision()
+        self.fishing()
+        if allow:
+            self.build_aquaculture()
+        self.fishing()
+        self.learning()
+        
+    def spawn_aquaculture_agent(self):
+        self._current_step = self.spawn_aquaculture_agent
+        
+    def vote(self):
+        self._current_step = self.vote
+        
+    def government_decision(self):
+        self._current_step = self.government_decision
+        return True
+   
+    def fishing(self):
+        self._current_step = self.fishing
+        
+    def build_aquaculture(self):
+        self._current_step = self.build_aquaculture
+        
+    def learning(self):
+        self._current_step = self.learning
         
     
 def main():
@@ -60,8 +102,6 @@ def main():
     s.start()
     s.join()
     return 0
-    
-class MissingConfigurationException(Exception): pass
 
 if __name__ == "__main__":
     sys.exit(main())
