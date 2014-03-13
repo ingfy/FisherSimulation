@@ -76,8 +76,7 @@ class WorldMap(BufferedCanvas):
                     if map.grid[i][j].aquaculture:
                         draw_aquaculture_center(dc, x + cell_w / 2, y + cell_h / 2, cell_w, cell_h, aquaculture_pen, aquaculture_brush)
                     if map.grid[i][j].land:
-                        draw_land(dc, x, y, cell_w, cell_h, land_pen, land_brush)
-            
+                        draw_land(dc, x, y, cell_w, cell_h, land_pen, land_brush)            
             
             return True
             

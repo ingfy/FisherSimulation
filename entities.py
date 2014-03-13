@@ -1,4 +1,4 @@
-from agent import VotingAgent, PrioritizingAgent, CommunicatingAgent
+7from agent import VotingAgent, PrioritizingAgent, CommunicatingAgent
 import messages
 import random
 import nn
@@ -11,12 +11,15 @@ class AgentFactory(object):
         
     def _produce(self, type, cfg_key):
         return type(self._directory, self._cfg[cfg_key]["priorities"])
+        
+    def _produce_home(self, type, cfg_key, home):
+        return type(self._directory, self._cfg[cfg_key]["priorities"], home)
     
     def fisherman(self, home_cell):
-        return Fisherman(self._directory, self._cfg["fisherman"]["priorities"], home_cell)
+        return self._produce_home(Fisherman, "fisherman", home_cell)
         
-    def aquaculture(self):
-        return self._produce(Aquaculture, "aquaculture")
+    def aquaculture(self, home_cell):
+        return self._produce_home(Aquaculture, "aquaculture", home_cell)
         
     def government(self):
         return self._produce(Government, "government")
@@ -40,8 +43,10 @@ class AquacultureSpawner(object):
         pass
         
     def choose_cell(self, world_map):
-        cells = world_map.get_structure().get_all_slots()
-        return random.choice(cells)
+        return world_map.get_random_cell(lambda c: not c.is_blocked())
+        
+    def craete(self, factory, cell):
+        return factory.aquaculture(cell)        
 
 # Fisherman:
 #   <list<slot>>    get_knowledge()
@@ -55,7 +60,7 @@ class Fisherman(ProducedAgent):
         ProducedAgent.__init__(self, directory, priorities)
         self._state = 0
         self._slot_knowledge = set([home_cell])
-        self._areas_threatened = set([])
+        self._area_threatened = None
         self._home = home_cell
         self.decision_mechanism = decision_mechanism or ga.FishermanNN(
             ga.FishermanNNGenotype.random()
@@ -70,14 +75,15 @@ class Fisherman(ProducedAgent):
     def go_fish(self, world_map):
         return world_map.get_a_slot()
         
-    def message_area_targeted(self, sender, msg):
-        self._areas_threatened.add(msg.cell)
-        if self.decide_complain(msg):
-            self.send_message(
-                self.directory.get_government(), 
-                messages.Complaint(msg.metainfo.reply(), msg)
-            )
-                
+    def vote_call_notification(self, message):
+        self._areas_threatened.add(message.target_message.cell)
+        complain = self.decide_complain(message.target_mesasge)
+        reply_msg = messages.VoteDontBuild if complain else messages.VoteBuild
+        self.send_message(
+            self.directory.get_government(),
+            reply_msg.reply_to(message)
+        )
+        
     def decide_complaint(self, target_message):
         # complaint decision
         # returns True if complain, otherwise False
@@ -98,11 +104,42 @@ class Fisherman(ProducedAgent):
 #   <>  handle_complaint(fisherman, cell, aquaculture)
 
 class Government(CommunicatingAgent, PrioritizingAgent):
-    def __init__(self, directory, priorities):
+    def __init__(self, directory, priorities, decision_mechanism=None):
         self._complaints = {}
         super(Government, self).__init__()
         self.register(directory, self.__class__)
         self.set_priorities(priorities)
+        self._decision_mechanism = decision_mechanism
+        self._target_message = None
+        
+    def target_notification(self, message):
+        self._target_message = message
+        
+    def new_vote_round(self, total_votes):
+        self._votes = {}
+        self._expected_votes = total_votes
+        
+    def vote_build_notification(self, message):
+        pass
+        
+    def vote_dont_build_notification(self, message):
+        pass
+        
+    def add_vote(self, voter, vote):
+        self._votes[voter] = vote
+        if self._expected_votes <= len(self._votes):
+            self.voting_decision()
+        
+    def voting_decision(self):
+        pass
+        
+    def call_vote(self):
+        """
+        Send call for vote to all agents
+        """
+        self.broadcast_message(
+            messages.VoteCall.reply_to(self._target_message, self.get_directory())
+        )
 
     def handle_complaint(self, fisherman, cell, aquaculture):
         if cell in self._complaints:
@@ -124,9 +161,14 @@ class Government(CommunicatingAgent, PrioritizingAgent):
 # <cell> pursue_spot(self, world_map)
 
 class Aquaculture(ProducedAgent):
-    def pursue_spot(self, world_map):
-        return (0, 0)
-
+     def __init__(self, directory, priorities, home, decision_mechanism=None):
+        ProducedAgent.__init__(self, directory, priorities)
+        self._home = home
+        self.decision_mechanism = decision_mechanism
+        
+    def notify_government(self):
+        government = self.get_directory().get_government()
+        agent.send_message(messages.TargetArea(self._home), government)
 
 # Signatures:
 #

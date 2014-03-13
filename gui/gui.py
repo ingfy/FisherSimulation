@@ -1,36 +1,25 @@
 import wx
 import worldmap
-import threading
+import multiprocessing
 import interface
 import simulation
 import time
 
-class BackendThread(threading.Thread):
-    def __init__(self, callback):
-        threading.Thread.__init__(self)
-        self._callback = callback
-        self._want_abort = False
+class Backend():
+    def __init__(self):
         self.start_interface()
         
     def start_interface(self):
         self._interface = interface.Interface()
-        
-    def loop(self):
-        while not self._want_abort:            
-            time.sleep(0.1)    
     
     def run(self):        
         self._interface.setup_config()       # TODO: Move to configuration screen
         self._interface.start_simulation()
-        self.loop()
-        
-    def stop(self):
-        self._callback(0)
+        self.loop()        
         
     # Interface methods
     def abort(self):
         self._interface.abort()
-        self._want_abort = True
         
     def get_map(self):
         return self._interface.get_map()

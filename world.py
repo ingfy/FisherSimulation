@@ -14,6 +14,12 @@ class Map(object):
     def get_structure(self):
         return self._structure
         
+    def get_random_nonblocked_cell(self, predicate = None):
+        cells = self._structure.get_all_slots()
+        return random.choice(
+            cells if predicate is None else filter(predicate, cells)
+        )
+        
     def populate_fishermen(self, factory, num):
         slots = self._structure.get_all_slots()
         random.shuffle(slots)
@@ -100,7 +106,7 @@ class AbstractStructure(object):
         for (x, y) in self._get_coordinates_list():
             if fun(x, y):
                 return (x, y)
-        return NOne
+        return None
             
     def get_cell_position(self, cell):
         return self.get_position(lambda (x, y): cell is self._slots[x][y])

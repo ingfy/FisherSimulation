@@ -3,16 +3,26 @@ import entities
 import world 
 import sys
 import agent
+import phases
 import directory
 import time
-import threading
+import multiprocessing
+
+class SimulationInfo(object):
+    def __init__(self, map, cfg, directory, aquaculture_spawner):
+        self.map = map
+        self.cfg = cfg
+        self.directory = directory
+        self.agent_factory = agent_factory
+        self.aquaculture_spawner = aquaculture_spawner
 
 ## Simulation MAIN module ##
-class Simulation():
+class Simulation(multiprocessing.Process):
     def __init__(self):
-        threading.Thread.__init__(self)
+        multiprocessing.Process.__init__(self)
         self._cfg = None
         self._want_abort = False
+        self._round = Round(self)
     
     def setup_config(self, cfg = None):
         self._cfg = config.load(varargs = None)
@@ -26,9 +36,10 @@ class Simulation():
         return self._map
         
     def initialize(self):
-        assert self._cfg is not None, "Configuration not initiated. Run setup_config()"        
-        self._directory = directory.Directory()
-        self._agent_factory = entities.AgentFactory(self._directory, self._cfg)
+        assert self._cfg is not None, 
+            "Configuration not initiated. Run setup_config()"        
+        directory = directory.Directory()
+        agent_factory = entities.AgentFactory(self._directory, self._cfg)
         cfg_struct = self._cfg['world']['structure']
         gs = world.GridStructure(
             cfg_struct['width'], 
@@ -36,64 +47,47 @@ class Simulation():
             (cfg_struct['cell_width'], cfg_struct['cell_height']), 
             cfg_struct['good_spot_frequency']
         )
-        self._map = world.Map(gs)
-        self._map.populate_fishermen(self._agent_factory, self._cfg['fisherman']['num'])
-        self._aquaculture_spawner = entities.AquacultureSpawner()
-        self._steps = Steps(self)
-        #self._map.get_structure().get_grid()[10][10].build_aquaculture(self._agent_factory.aquaculture())
+        map = world.Map(gs)
+        map.populate_fishermen(
+            self._agent_factory, 
+            self._cfg['fisherman']['num']
+        )
+        aquaculture_spawner = entities.AquacultureSpawner()
+        #self._map.get_structure().get_grid()[10][10].build_aquaculture(self._agent_factory.aquaculture())        
+        self._round = phases.Round(SimulationInfo(
+            map, 
+            self._cfg, 
+            directory, 
+            agent_factory, 
+            aquaculture_spawner
+        ))
+    
+    def step(self):
+        result = self._round.next()
+        return do.PhaseReport.from_step_result(result)
+   
+    def run_rounds(self, rounds):
+        while not self._want_abort and self._round.rounds() < rounds:
+            self._round.next()
+        if not self._want_abort:
+            self.wait()
         
-    def abort(self):
-        self._steps.abort()        
+    def run_steps(self, steps):
+        while not self._want_abort and steps > 0:
+            self._round.next()
+            steps -= 1
+        if not self._want_abort:
+            self.wait()
             
-    def new_round(self):
-        pass
-        
-    def start(self):
-        self._steps.start()
-        
-class Steps(threading.Thread):
-    threading.Thread.__init__(self)
-    def __init__(self, simulation):
-        self._simulation = simulation
-        self._current_step = self.start
-        self._want_abort = False
+    def run_inf(self):
+        while not self._want_abort:
+            self._round.next()
         
     def abort(self):
         self._want_abort = True
-        
+                    
     def run(self):
-        while not self._want_abort:
-            self.round()
-        
-    def round(self):
-        self.spawn_aquaculture_agent()
-        self.vote()
-        allow = self.government_decision()
-        self.fishing()
-        if allow:
-            self.build_aquaculture()
-        self.fishing()
-        self.learning()
-        
-    def spawn_aquaculture_agent(self):
-        self._current_step = self.spawn_aquaculture_agent
-        
-    def vote(self):
-        self._current_step = self.vote
-        
-    def government_decision(self):
-        self._current_step = self.government_decision
-        return True
-   
-    def fishing(self):
-        self._current_step = self.fishing
-        
-    def build_aquaculture(self):
-        self._current_step = self.build_aquaculture
-        
-    def learning(self):
-        self._current_step = self.learning
-        
+        self.wait()
     
 def main():
     s = Simulation()

@@ -28,7 +28,8 @@ class CommunicatingAgent(IdentifyingAgent):
         directory.register_communicating_agent(self, type)
     
     def get_directory(self):
-        assert self._directory is not None, "No directory defined for %s." % self.get_id()
+        assert self._directory is not None, 
+            "No directory defined for %s." % self.get_id()
         return self._directory
         
     def send_message(self, recipient, message):
@@ -41,6 +42,10 @@ class CommunicatingAgent(IdentifyingAgent):
             contents: message
         })
         
+    def broadcast_message(self, message):
+        for recipient in self.get_directory().get_agents(exclude = self):
+            self.send_message(recipient, message)
+        
     def receive_message(self, sender, message):
         self._message_log.append({
             direction: "received",
@@ -49,7 +54,7 @@ class CommunicatingAgent(IdentifyingAgent):
             recipient: self.get_id(),
             contents: message
         })
-        self.react_to_message(sender, message)        
+        message.reaction(self)       
         
     def react_to_message(self, sender, message):
         raise NotImplementedError
@@ -64,13 +69,16 @@ class VotingAgent(CommunicatingAgent):
     def ask_for_vote(self, vote_question):
         # voting decision
         pass
+        
+    def vote_call_notification(self, message):
+        raise NotImplementedException
                 
     def _vote(self, vote_question, vote):
         gov = self._directory.get_government()
         self._directory.send_message(
             self, 
             gov, 
-            vote(vote_question.reply(self._directory.get_timestamp()), vote_question)
+            vote.reply_to(vote_question, self._directory)
         )
         
 class PrioritizingAgent(object):
