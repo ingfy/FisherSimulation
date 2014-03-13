@@ -1,5 +1,6 @@
-7from agent import VotingAgent, PrioritizingAgent, CommunicatingAgent
+from agent import VotingAgent, PrioritizingAgent, CommunicatingAgent
 import messages
+import vote
 import random
 import nn
 import ga
@@ -78,10 +79,12 @@ class Fisherman(ProducedAgent):
     def vote_call_notification(self, message):
         self._areas_threatened.add(message.target_message.cell)
         complain = self.decide_complain(message.target_mesasge)
-        reply_msg = messages.VoteDontBuild if complain else messages.VoteBuild
         self.send_message(
             self.directory.get_government(),
-            reply_msg.reply_to(message)
+            messages.VoteResponse.reply_to(
+                message, 
+                self.get_directory(),
+                vote.DONT_BUILD if complain else vote.BUILD)
         )
         
     def decide_complaint(self, target_message):
@@ -117,16 +120,10 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         
     def new_vote_round(self, total_votes):
         self._votes = {}
-        self._expected_votes = total_votes
+        self._expected_votes = total_votes        
         
-    def vote_build_notification(self, message):
-        pass
-        
-    def vote_dont_build_notification(self, message):
-        pass
-        
-    def add_vote(self, voter, vote):
-        self._votes[voter] = vote
+    def vote(self, message):
+        self._votes[message.metainfo.sender] = message.vote
         if self._expected_votes <= len(self._votes):
             self.voting_decision()
         
@@ -138,7 +135,10 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         Send call for vote to all agents
         """
         self.broadcast_message(
-            messages.VoteCall.reply_to(self._target_message, self.get_directory())
+            messages.VoteCall.reply_to(
+                self._target_message, 
+                self.get_directory()
+            )
         )
 
     def handle_complaint(self, fisherman, cell, aquaculture):

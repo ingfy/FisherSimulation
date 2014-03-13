@@ -1,3 +1,5 @@
+import vote
+
 class MetaInfo(object):
     def __init__(self, source, target, timestamp):
         self.source = source
@@ -60,29 +62,26 @@ class VoteCall(Inform, Reply):
             )
 
 class VoteResponse(Inform, Reply):
-    def __init__(self, metainfo, vote_call):
+    def __init__(self, metainfo, vote_call, vote):
         Message(self, metainfo)
         self.vote_call = vote_call        
+        self.vote = vote
         
-    def _get_str_summary(self, world_map, str): 
-        return str % world_map.get_structure().get_cell_position(
+    @classmethod
+    def reply_to(c, message, directory, vote):
+        return c(
+            message.metainfo.reply(directory.get_timestamp()),
+            message,
+            vote
+        )
+        
+    def reaction(self, recipient):
+        recipient.vote(self)
+        
+    def get_str_summary(self, world_map, str): 
+        return "Vote build for cell targeted at: (%d, %d)" if 
+                self.vote = vote.BUILD else 
+            "Vote DON'T build for cell targeted at: (%d, %d)"
+            % world_map.get_structure().get_cell_position(
                 self.vote_call.target_message.cell
             )
-        
-class VoteBuild(VoteResponse):
-    def reaction(self, recipient):
-        recipient.vote_build_notification(self)
-
-    def get_str_summary(self, world_map):
-        self._get_str_summary(world_map,
-            "Vote build for cell targeted at: (%d, %d)"
-        )
-    
-class VoteDontBuild(VoteResponse):
-    def reaction(self, recipient):
-        recipient.vote_dont_build_notification(self)
-
-    def get_str_summary(self, world_map):
-        self._get_str_summary(world_map,
-            "Vote DON'T build for cell targeted at: (%d, %d)"
-        )
