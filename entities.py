@@ -57,7 +57,7 @@ class AquacultureSpawner(object):
 #                                           spot from the map
 
 class Fisherman(ProducedAgent):
-    def __init__(self, directory, priorities, home_cell, decision_mechanism = None):
+    def __init__(self, directory, priorities, home_cell, decision_mechanism=None):
         ProducedAgent.__init__(self, directory, priorities)
         self._state = 0
         self._slot_knowledge = set([home_cell])
@@ -114,20 +114,31 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         self.set_priorities(priorities)
         self._decision_mechanism = decision_mechanism
         self._target_message = None
+        self._broadcast_location_mode = "immediately"
         
     def target_notification(self, message):
         self._target_message = message
         
-    def new_vote_round(self, total_votes):
+    def new_vote_round(self):
         self._votes = {}
-        self._expected_votes = total_votes        
         
     def vote(self, message):
         self._votes[message.metainfo.sender] = message.vote
-        if self._expected_votes <= len(self._votes):
+        
+        # Broadcast the vote
+        self.broadcast_message(
+            messages.VoteResponseInform.reply_to(message, self.get_directory())
+        )
+        
+        # If all votes have been cast, make the decision
+        #all_voters = self.get_directory().get_all_agents(exclude = self)
+        #if set(all_voters) == set(self._votes.keys()):
             self.voting_decision()
         
     def voting_decision(self):
+        all_voters = self.get_directory().get_all_agents(exclude = self)
+        assert set(all_voters) == set(self._votes.keys()),
+            "Unexpected number of votes. Ensure that all votes are cast."
         pass
         
     def call_vote(self):
@@ -141,30 +152,24 @@ class Government(CommunicatingAgent, PrioritizingAgent):
             )
         )
 
-    def handle_complaint(self, fisherman, cell, aquaculture):
-        if cell in self._complaints:
-            if fisherman in self._complaints[cell]:
-                # Have received complaints on same cell from same
-                # fisherman before.
-                pass
-            else:
-                pass
-                # Have received complaints from other fishermen
-                # about the same spot
-            # Several complaints
-        else:
-            # First complaint about spot
-            self._complaints[cell] = [fisherman]
-
-
-# Signatures:
-# <cell> pursue_spot(self, world_map)
 
 class Aquaculture(ProducedAgent):
      def __init__(self, directory, priorities, home, decision_mechanism=None):
         ProducedAgent.__init__(self, directory, priorities)
         self._home = home
         self.decision_mechanism = decision_mechanism
+        self._area_threatened = None
+        
+     def vote_call_notification(self, message):
+        self._areas_threatened.add(message.target_message.cell)
+        complain = self.decide_vote(message.target_mesasge)
+        self.send_message(
+            self.directory.get_government(),
+            messages.VoteResponse.reply_to(
+                message, 
+                self.get_directory(),
+                vote.DONT_BUILD if complain else vote.BUILD)
+        )
         
     def notify_government(self):
         government = self.get_directory().get_government()

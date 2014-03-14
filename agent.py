@@ -59,26 +59,22 @@ class CommunicatingAgent(IdentifyingAgent):
     def react_to_message(self, sender, message):
         raise NotImplementedError
         
-class VotingAgent(CommunicatingAgent):        
-    def vote_build(self, vote_question):
-        self._vote(vote_question, messages.VoteBuild)
+class VotingAgent(CommunicatingAgent):                
+    def decide_vote(self, target_message):
+        raise NotImplementedException
         
-    def vote_dont_build(self, vote_question):
-        self._vote(vote_question, messages.VoteDontBuild)
-        
-    def ask_for_vote(self, vote_question):
-        # voting decision
-        pass
+    def vote_response_inform_notification(self, message):
+        raise NotImplementedException
         
     def vote_call_notification(self, message):
-        raise NotImplementedException
-                
-    def _vote(self, vote_question, vote):
-        gov = self._directory.get_government()
-        self._directory.send_message(
-            self, 
-            gov, 
-            vote.reply_to(vote_question, self._directory)
+        self._areas_threatened.add(message.target_message.cell)
+        complain = self.decide_vote(message.target_mesasge)
+        self.send_message(
+            self.directory.get_government(),
+            messages.VoteResponse.reply_to(
+                message, 
+                self.get_directory(),
+                vote.DONT_BUILD if complain else vote.BUILD)
         )
         
 class PrioritizingAgent(object):

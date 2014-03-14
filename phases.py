@@ -1,3 +1,5 @@
+import vote
+
 class Round(object):
     def __init__(self, info):
         LEARNING = Learning(info, None, "LEARNING")
@@ -6,7 +8,7 @@ class Round(object):
         BUILDING = Building(info, FISHING3, "BUILDING")
         FISHING1 = Fishing(info, BUILDING, "FISHING1")
         GOVDECISION = GovernmentDecision(info, 
-            { True: FISHING1, False: FISHING2 }, "GOVDECISION")
+            { vote.BUILD: FISHING1, vote.DONT_BUILD: FISHING2 }, "GOVDECISION")
         VOTING = Voting(info, GOVDECISION, "VOTING")
         SPAWNING = SpawnAquacultureAgent(info, VOTING, "SPAWNING")
         self._current_step = self._start = Round.spawn = 
@@ -87,11 +89,13 @@ class Voting(Step):
     def do(self):
         # government issues call for voting 
         government = self._info.directory.get_government()
-        government.call_vote()
+        government.new_vote_round()
+        government.call_vote()        
         return StepResult(self, [], [])
         
 class GovernmentDecision(DecisionStep):
    def do(self):
+        decision = government.voting_decision()
         return (StepResult([]), decision)
 
 class Fishing(Step):

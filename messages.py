@@ -27,11 +27,6 @@ class Reply(Message):
             message
         )
 
-class DeclareIntention(Inform):
-    pass
-    
-class Request(Message):
-    pass
     
 ### Specific messages
 
@@ -85,3 +80,17 @@ class VoteResponse(Inform, Reply):
             % world_map.get_structure().get_cell_position(
                 self.vote_call.target_message.cell
             )
+            
+class VoteResponseInform(Inform, Reply):
+    def __init__(self, metainfo, vote_response):
+        Message(self, metainfo):
+        self.vote_response = vote_response
+        
+    def reaction(self, recipient):
+        recipient.vote_response_inform_notification(self)
+        
+    def get_str_summary(self):
+        return "Agent %s voted %s." (
+            self.vote_response.metainfo.sender.get_id(),
+            "BUILD OK" if self.vote_response.vote = vote.BUILD else "COMPLAINT"
+        )
