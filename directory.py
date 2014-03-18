@@ -30,10 +30,11 @@ class Directory(object):
     def register_communicating_agent(self, agent, type):
         self._catalogue.append((agent, type))
         
-    def get_agents(self, type=None, exclude=None):
+    def get_agents(self, type=None, exclude=None, predicate=None):
         return [a for a, t in self._catalogue if 
             (type is None or t == type) and 
-            (exclude is None or a == exclude)
+            (exclude is None or a == exclude) and
+            (predicate is None or predicate(a))
         ]
         
     def get_government(self):

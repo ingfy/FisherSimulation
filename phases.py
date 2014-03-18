@@ -1,4 +1,6 @@
 import vote
+import priority
+import entities
 
 class Round(object):
     def __init__(self, info):
@@ -11,15 +13,15 @@ class Round(object):
             { vote.BUILD: FISHING1, vote.DONT_BUILD: FISHING2 }, "GOVDECISION")
         VOTING = Voting(info, GOVDECISION, "VOTING")
         SPAWNING = SpawnAquacultureAgent(info, VOTING, "SPAWNING")
-        self._current_step = self._start = Round.spawn = 
-            Step(self.spawn_quaculture_agent, vote)
+        self._current_step = self._start = SPAWNING
         self._round_counter = 0
         
     def next(self):
         self._current_step = self._current_step.next()
-        result = self._current_step.action()
-        if self._current_step = self._start:
+        if self._current_step is None:
             self._round_counter += 1
+            self._current_step = self._start
+        result = self._current_step.action()
         return result
        
     def rounds(self):
@@ -30,6 +32,10 @@ class StepResult(object):
         self.phase = phase
         self.messages_sent = messages_sent
         self.cells_changed = cells_changed
+        
+    @classmethod
+    def cells_changed(c, phase, cells_changed):
+        return c(phase, [], cells_changed)
         
     @classmethod
     def no_cells_changed(c, phase):
@@ -74,13 +80,18 @@ class DecisionStep(Step):
         
 class SpawnAquacultureAgent(Step):
     def action(self):
-        # choose a random cell
+        # reset round
+        for a in self._info.government.get_agents():
+            a.round_reset()    
+    
+        # choose a (random) cell
         cell = self._info.aquaculture_spawner.choose_cell(self._info.map)
         # create agent
         agent = self._info.aquaculture_spawner.create(
             self._info.agent_factory, 
             cell
         )
+        self._info.spawned_agent = agent
         # tell the government
         agent.notify_government()
         return StepResult.no_cells_changed(self)
@@ -91,21 +102,40 @@ class Voting(Step):
         government = self._info.directory.get_government()
         government.new_vote_round()
         government.call_vote()        
-        return StepResult(self, [], [])
+        return StepResult.no_cells_changed(self)
         
 class GovernmentDecision(DecisionStep):
    def do(self):
         decision = government.voting_decision()
-        return (StepResult([]), decision)
+        return (StepResult.no_cells_changed(self), decision)
 
 class Fishing(Step):
     def do(self):
-        return StepResult([])
+        # Agents do profit activities
+        government = self._info.directory.get_government()
+        working_agents = self._info.directory.get_agents(exclude = government)
+        for a in working_agents: a.work()
+        
+        # (Local) Aquaculture companies pay some of their revenue to locals
+        # through taxation
+        for a in self._info.directory.get_agents(type = entities.Aquaculture):
+            a.pay_taxes()
+        
+        return StepResult.no_cells_changed(self)
         
 class Building(Step):
     def do(self):
-        return StepResult([])
+        location = self._info.spawned_agent.get_location()
+        agent = self._info.spawned_agent
+        blocking_radius = 100
+        affected_cells = self._info.map.build_aquaculture(
+            agent, 
+            location, 
+            blocking_radius
+        )
+        return StepResult.cells_changed(phase, affected_cells)
         
 class Learning(Step):
     def do(self):
+        influences = priority.Influences(
         return StepResult([])

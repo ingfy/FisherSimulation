@@ -17,7 +17,12 @@ class Message(object):
         raise NotImplementedException()
 
 class Inform(Message):
-    pass
+    def __init__(self, metainfo, str):
+        Message(self, metainfo)
+        self.str = str
+
+    def get_str_summary(self):
+        return self.str
     
 class Reply(Message):
     @classmethod
@@ -42,7 +47,7 @@ class TargetArea(DeclareIntention):
         return "Cell targeted at: (%d, %d)" % 
             world_map.get_structure().get_cell_position(self.cell)
         
-class VoteCall(Inform, Reply):
+class VoteCall(Message, Reply):
     def __init__(self, metainfo, target_message):
         Message(self, metainfo)
         self.target_message = target_message
@@ -56,7 +61,7 @@ class VoteCall(Inform, Reply):
                 self.target_mesasge.cell
             )
 
-class VoteResponse(Inform, Reply):
+class VoteResponse(Message, Reply):
     def __init__(self, metainfo, vote_call, vote):
         Message(self, metainfo)
         self.vote_call = vote_call        
@@ -81,7 +86,7 @@ class VoteResponse(Inform, Reply):
                 self.vote_call.target_message.cell
             )
             
-class VoteResponseInform(Inform, Reply):
+class VoteResponseInform(Message, Reply):
     def __init__(self, metainfo, vote_response):
         Message(self, metainfo):
         self.vote_response = vote_response

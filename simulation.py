@@ -15,6 +15,7 @@ class SimulationInfo(object):
         self.directory = directory
         self.agent_factory = agent_factory
         self.aquaculture_spawner = aquaculture_spawner
+        self.spawned_agent = None
 
 ## Simulation MAIN module ##
 class Simulation(multiprocessing.Process):
@@ -53,7 +54,6 @@ class Simulation(multiprocessing.Process):
             self._cfg['fisherman']['num']
         )
         aquaculture_spawner = entities.AquacultureSpawner()
-        #self._map.get_structure().get_grid()[10][10].build_aquaculture(self._agent_factory.aquaculture())        
         self._round = phases.Round(SimulationInfo(
             map, 
             self._cfg, 

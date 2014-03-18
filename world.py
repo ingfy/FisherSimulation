@@ -31,6 +31,19 @@ class Map(object):
         
         for s in (good + bad)[:num]:
             s.populate(factory.fisherman(s))
+            
+    def build_aquaculture(self, agent, cell, blocking_radius):
+        radius = self.get_radius(
+            blocking_radius, 
+            self._structure.get_cell_position(cell)
+        )
+        for b in radius:
+            if not b == cell:
+                b.block()
+                
+        cell.build_aquaculture(agent)
+        
+        return radius
         
     def get_radius(self, r, pos):
         return self._structure.get_radius(r, pos)
@@ -71,6 +84,9 @@ class Slot(object):
 
     def fish_spawning(self):
         return self._spawning
+        
+    def block(self):
+        self._blocked = True
 
     def populate(self, agent):
         self._occupant = agent

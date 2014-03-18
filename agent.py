@@ -64,18 +64,24 @@ class VotingAgent(CommunicatingAgent):
         raise NotImplementedException
         
     def vote_response_inform_notification(self, message):
-        raise NotImplementedException
+        # Most agents do nothing in response to this
+        pass
+        
         
     def vote_call_notification(self, message):
         self._areas_threatened.add(message.target_message.cell)
-        complain = self.decide_vote(message.target_mesasge)
+        decision = self.decide_vote(message.target_mesasge)
         self.send_message(
             self.directory.get_government(),
             messages.VoteResponse.reply_to(
                 message, 
                 self.get_directory(),
-                vote.DONT_BUILD if complain else vote.BUILD)
+                decision
         )
+        
+class WorkingAgent(object):
+    def work(self):
+        raise NotImplementedException()
         
 class PrioritizingAgent(object):
     def __init__(self):
