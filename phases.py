@@ -10,7 +10,7 @@ class Round(object):
         BUILDING = Building(info, FISHING3, "BUILDING")
         FISHING1 = Fishing(info, BUILDING, "FISHING1")
         GOVDECISION = GovernmentDecision(info, 
-            { vote.BUILD: FISHING1, vote.DONT_BUILD: FISHING2 }, "GOVDECISION")
+            { vote.APPROVE: FISHING1, vote.DISAPPROVE: FISHING2 }, "GOVDECISION")
         VOTING = Voting(info, GOVDECISION, "VOTING")
         SPAWNING = SpawnAquacultureAgent(info, VOTING, "SPAWNING")
         self._current_step = self._start = SPAWNING
@@ -78,6 +78,12 @@ class DecisionStep(Step):
     def next(self):
         return self._next_table[self._decision_value]
         
+class CoastalPlanning(Step):
+    pass
+    
+class Hearing(Step):
+    pass
+        
 class SpawnAquacultureAgent(Step):
     def action(self):
         # reset round
@@ -137,5 +143,5 @@ class Building(Step):
         
 class Learning(Step):
     def do(self):
-        influences = priority.Influences(
+        influences = priority.Influences()
         return StepResult([])

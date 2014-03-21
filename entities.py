@@ -3,6 +3,7 @@ import messages
 import vote
 import random
 import nn
+import plan
 import ga
 
 class AgentFactory(object):
@@ -48,10 +49,43 @@ class AquacultureSpawner(object):
         pass
         
     def choose_cell(self, world_map):
-        return world_map.get_random_cell(lambda c: not c.is_blocked())
+        return world_map.get_random_cell(predicate=lambda c: not c.is_blocked())
         
     def craete(self, factory, cell):
-        return factory.aquaculture(cell)        
+        return factory.aquaculture(cell)
+        
+
+        
+# Handles the planning
+class Municipality(CommunicatingAgent, PrioritizingAgent)
+    pass
+    
+    def coastal_planning(self, world_map, previous_plan=None, complaints=None):
+        plan = self.create_plan(world_map, previous_plan, complaints)
+        self.distribute_plan(plan)
+        
+    def create_plan(self, world_map, plan=None, complaints=None):
+        if plan is None:
+            # If new plan, add all possible cells as aquaculture sites
+            
+            # TODO:
+            #  Maybe divide into different kinds of areas first,
+            #  maybe only 50% of the map for aquaculture.
+            
+            plan = {
+                c: plan.AQUACULTURE
+                    for c in world_map.get_all_cells()
+                    if not c.is_blocked()
+            }
+        
+        # Convert all cells that have approved complaints to
+        # reserved zones.
+        if not complaints is None:
+            for c in complaints:
+                if c.approved:
+                    plan[c.cell] = plan.RESERVED_ZONE
+                    
+        return plan
 
 
 # Signatures:

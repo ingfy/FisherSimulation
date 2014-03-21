@@ -79,12 +79,12 @@ class VoteResponse(Message, Reply):
         recipient.vote(self)
         
     def get_str_summary(self, world_map, str): 
-        return "Vote build for cell targeted at: (%d, %d)" if 
-                self.vote = vote.BUILD else 
-            "Vote DON'T build for cell targeted at: (%d, %d)"
-            % world_map.get_structure().get_cell_position(
-                self.vote_call.target_message.cell
-            )
+        return  "Vote approve for cell : (%d, %d)" if 
+            self.vote == vote.APPROVE else 
+            "Vote COMPLAIN for cell: (%d, %d)" % 
+                world_map.get_structure().get_cell_position(
+                    self.vote_call.target_message.cell
+                )
             
 class VoteResponseInform(Message, Reply):
     def __init__(self, metainfo, vote_response):
@@ -95,7 +95,9 @@ class VoteResponseInform(Message, Reply):
         recipient.vote_response_inform_notification(self)
         
     def get_str_summary(self):
-        return "Agent %s voted %s." (
+        return "Agent %s voted %s." % (
             self.vote_response.metainfo.sender.get_id(),
-            "BUILD OK" if self.vote_response.vote = vote.BUILD else "COMPLAINT"
+            "APPROVE" if 
+                self.vote_response.vote == vote.APPROVE else 
+                "COMPLAINT"
         )

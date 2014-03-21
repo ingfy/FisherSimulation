@@ -14,11 +14,12 @@ class Map(object):
     def get_structure(self):
         return self._structure
         
-    def get_random_nonblocked_cell(self, predicate = None):
+    def get_random_cell(self, predicate = None):
+        return random.choice(self.get_all_cells(predicate))
+        
+    def get_all_cells(self, predicate=None):
         cells = self._structure.get_all_slots()
-        return random.choice(
-            cells if predicate is None else filter(predicate, cells)
-        )
+        return cells if predicate is None else filter(predicate, cells)
         
     def populate_fishermen(self, factory, num):
         slots = self._structure.get_all_slots()
