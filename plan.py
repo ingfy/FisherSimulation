@@ -1,5 +1,16 @@
-class CoastalPlan(object):
-    pass
+class CoastalPlan(dict):
+    def __init__(self, dictionary):
+        for key in dictionary:
+            dict.__setitem__(self, key, dictionary[key])
+            
+    def _of_type(self, type):
+        return [cell for cell in self if self[cell] == type]
+            
+    def aquaculture_sites(self):
+        return self._of_type(AQUACULTURE_SITE)
+        
+    def reserved_zones(self):
+        return self._of_type(RESERVED_ZONE)
     
 class PlanEntity(object):
     def __init__(self, description=None):
@@ -10,7 +21,7 @@ class PlanEntity(object):
             return "Plan Entity"
         return self.description
     
-AQUACULTURE = PlanEntity(
+AQUACULTURE_SITE = PlanEntity(
     """
     **AQUACULTURE SITE**
     The aquaculture site represents a place that has been approved for 

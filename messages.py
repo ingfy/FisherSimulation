@@ -62,10 +62,13 @@ class VoteCall(Message, Reply):
             )
 
 class VoteResponse(Message, Reply):
-    def __init__(self, metainfo, vote_call, vote):
+    def __init__(self, metainfo, target_message, vote):
         Message(self, metainfo)
-        self.vote_call = vote_call        
+        self.target_message = target_message        
         self.vote = vote
+        
+    def get_cell(self):
+        return self.target_message.cell
         
     @classmethod
     def reply_to(c, message, directory, vote):

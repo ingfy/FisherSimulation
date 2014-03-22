@@ -27,15 +27,26 @@ class Directory(object):
             })            
             self._messages_sent += 1
         
-    def register_communicating_agent(self, agent, type):
-        self._catalogue.append((agent, type))
+    def register_communicating_agent(self, agent, type, voting=False):
+        self._catalogue.append((agent, type, voting))
         
-    def get_agents(self, type=None, exclude=None, predicate=None):
-        return [a for a, t in self._catalogue if 
+    def get_voting_agents(self):
+        return [a for a, _, v in self.get_agents() if v]
+        
+    def get_agents(self, type=None, exclude=None, only_voters=True, 
+            predicate=None):
+        return [a for a, t, v in self._catalogue if 
             (type is None or t == type) and 
             (exclude is None or a == exclude) and
+            (not only_voters or v) and
             (predicate is None or predicate(a))
         ]
+        
+    def get_municipality(self):
+        muns = self.get_agents(type = entities.Municipality)
+        assert len(muns) == 1,
+            "Unexpected number of municipalities: %d" % len(muns)
+        return muns[0]
         
     def get_government(self):
         govs = self.get_agents(type = entities.Government)        

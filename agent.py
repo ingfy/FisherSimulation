@@ -40,7 +40,7 @@ class CommunicatingAgent(IdentifyingAgent):
             sender: self.get_id(),
             recipient: recipient,
             contents: message
-        })
+        })        
         
     def broadcast_message(self, message):
         for recipient in self.get_directory().get_agents(exclude = self):

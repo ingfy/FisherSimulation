@@ -32,12 +32,30 @@ class AgentFactory(object):
     def civilian(self):
         return self._produce(Civilian, "civilian")
         
+# Base for all the non-government, non municipality agents:
+#  Fishermen, aquaculture owners, civilians and tourists
 class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
     def __init__(self, directory, priorities):
         super(ProducedAgent, self).__init__()
-        self.register(directory, self.__class__)
+        self.register(directory, self.__class__, voting=True)
         self.set_priorities(priorities)
         self._capital = 0
+        self.threats = []
+        
+    def target_notification(self, message):
+        self.threats.add(message)        
+        
+    def hearing(self):
+        for target_message in self._threats:
+            vote = self.decide_vote(target_message)
+            self.send_message(
+                self.get_directory().get_government(),
+                messages.VoteResponse.reply_to(
+                    target_message, 
+                    self.get_directory()                    
+                    vote
+                )
+            )
         
     def round_reset(self):
         self._capital = 0
@@ -45,20 +63,47 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
 # AquacultureSpawner
 
 class AquacultureSpawner(object):
-    def __init__(self):
-        pass
         
-    def choose_cell(self, world_map):
-        return world_map.get_random_cell(predicate=lambda c: not c.is_blocked())
+    def choose_cell(self, plan):
+        # Maybe it should choose the best cell based on public information
+        return random.choice(plan.aquaculture_sites())
         
-    def craete(self, factory, cell):
+    def create(self, factory, cell):
         return factory.aquaculture(cell)
-        
 
         
 # Handles the planning
 class Municipality(CommunicatingAgent, PrioritizingAgent)
-    pass
+    def __init__(self, directory, priorities, decision_mechanism=None):
+        super(Municipality, self).__init__()
+        self.register(directory, self.__class__)
+        self.set_priorities(priorities)
+        self._decision_mechanism = decision_mechanism     
+        self._taxes = {}
+        self._capital = 0.0
+        
+    def round_reset(self):
+        self._capital = 0.0
+    
+    def collect_tax(sender, amount):
+        self.send_message(sender, messages.Inform(
+            "Tax received %02.2f from %s" % (amount, sender.get_id())
+        )
+        self._capital += amount
+        if not sender in self._taxes:
+            self._taxes[sender] = []
+        self._taxes[sender].add(amount)
+            
+    def distribute_taxes(self):
+        benefit_agents = self._directory.get_agents(
+            predicate=lambda a: a.is_community_member()
+        )
+        for a in benefit_agents:
+            amount = self._capital / len(benefit_agents)
+            a.give(amount)
+            self.send_message(a, messages.Inform(
+                "Tax benefit %02.2f to %s" % (amount, a.get_id())
+            )
     
     def coastal_planning(self, world_map, previous_plan=None, complaints=None):
         plan = self.create_plan(world_map, previous_plan, complaints)
@@ -72,11 +117,11 @@ class Municipality(CommunicatingAgent, PrioritizingAgent)
             #  Maybe divide into different kinds of areas first,
             #  maybe only 50% of the map for aquaculture.
             
-            plan = {
-                c: plan.AQUACULTURE
+            plan = plan.CoastalPlan({
+                c: plan.AQUACULTURE_SITE
                     for c in world_map.get_all_cells()
                     if not c.is_blocked()
-            }
+            })
         
         # Convert all cells that have approved complaints to
         # reserved zones.
@@ -86,11 +131,24 @@ class Municipality(CommunicatingAgent, PrioritizingAgent)
                     plan[c.cell] = plan.RESERVED_ZONE
                     
         return plan
+        
+    def distribute_plan(self, plan):
+        # Send a message to all interested parties
+        for a in self.get_directory().get_agents(voting_only=True):
+            for cell in plan:
+                if plan[cell] == plan.AQUACULTURE_SITE:
+                    self.send_message(a, messages.TargetArea(
+                        messages.MetaInfo(
+                            self, a, self.get_directory().get_timestamp()
+                        ),
+                        cell
+                    )
 
 
 # Signatures:
 #   <>  handle_complaint(fisherman, cell, aquaculture)
 
+# Handles complaints to the plan
 class Government(CommunicatingAgent, PrioritizingAgent):
     def __init__(self, directory, priorities, decision_mechanism=None):
         self._complaints = {}
@@ -98,43 +156,20 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         self.register(directory, self.__class__)
         self.set_priorities(priorities)
         self._decision_mechanism = decision_mechanism
-        self._target_message = None
-        self._broadcast_location_mode = "immediately"        
-        self._taxes = {}
-        self._capital = 0.0
-        
-    def target_notification(self, message):
-        self._target_message = message
         
     def new_vote_round(self):
-        self._votes = {}
-        
-    def collect_tax(sender, amount):
-        self.send_message(sender, messages.Inform(
-            "Tax received %02.2f from %s" % (amount, sender.get_id())
-        )
-        self._capital += amount
-        if sender in self._taxes:
-            self._taxes[sender] += amount
-        else:
-            self._taxes[sender] = amount
-            
-    def distribute_taxes(self):
-        benefit_agents = self._directory.get_agents(
-            predicate=lambda a: a.is_community_member()
-        )
-        for a in benefit_agents:
-            amount = self._capital / len(benefit_agents)
-            a.give(amount)
-            self.send_message(a, messages.Inform(
-                "Tax benefit %02.2f to %s" % (amount, a.get_id())
-            )
+        self._complaints = {}
             
     def round_reset(self):
-        self._capital = 0.0
+        self.new_vote_round()
         
     def vote(self, message):
-        self._votes[message.metainfo.sender] = message.vote
+        cell = message.get_cell()
+        if message.vote == vote.DONT_BUILD:
+            complaint = plan.Complaint(cell)
+            if not cell in self._complaints:
+                self._complaints[cell] = []
+            self._complaints[cell].add(complaints)
         
         # Broadcast the vote
         self.broadcast_message(
@@ -153,6 +188,7 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         pass
         
     def call_vote(self):
+        # Outdated maybe
         """
         Send call for vote to all agents
         """
@@ -181,7 +217,6 @@ class Fisherman(ProducedAgent):
         self._slot_knowledge = {
             home_cell: home_cell.get_fish_quantity()
         }
-        self._area_threatened = []
         self._home = home_cell
         self._fishing_efficiency = 1.0
         self.decision_mechanism = decision_mechanism or ga.FishermanNN(
@@ -200,6 +235,8 @@ class Fisherman(ProducedAgent):
         # run output through market
         self._capital += output
         
+        
+    
         
     def vote_response_inform_notification(self, message):
         cell = message.vote_response.vote_call.target_message.cell
