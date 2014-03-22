@@ -5,14 +5,16 @@ import entities
 class Round(object):
     def __init__(self, info):
         LEARNING = Learning(info, None, "LEARNING")
-        FISHING3 = Fishing(info, LEARNING, "FISHING3")
-        FISHING2 = Fishing(info, FISHING3, "FISHING2")
-        BUILDING = Building(info, FISHING3, "BUILDING")
+        FISHING2 = Fishing(info, LEARNING, "FISHING2")
+        BUILDING = Building(info, FISHING2, "BUILDING")
         FISHING1 = Fishing(info, BUILDING, "FISHING1")
-        GOVDECISION = GovernmentDecision(info, 
-            { vote.APPROVE: FISHING1, vote.DISAPPROVE: FISHING2 }, "GOVDECISION")
-        VOTING = Voting(info, GOVDECISION, "VOTING")
-        SPAWNING = SpawnAquacultureAgent(info, VOTING, "SPAWNING")
+        GOVDECISION = GovernmentDecision(info, None, "GOVDECISION")
+        HEARING = Hearing(info, GOVDECISION, "HEARING")
+        COASTPLAN = CoastalPlanning(info, Hearing, "SPAWNING")
+        GOVDECISION.set_next_table({ 
+            plan.Decision.APPROVE: FISHING1, 
+            vote.Decision.REVIEW: COASTPLAN 
+        })
         self._current_step = self._start = SPAWNING
         self._round_counter = 0
         
@@ -62,8 +64,11 @@ class Step(object):
 class DecisionStep(Step):
     def __init__(self, info, next_table, name):
         self.Step(info, None, name)
-        self._next_table = next_table
+        self.set_next_table(next_table)
         self._decision_value = None
+        
+    def set_next_table(self, next_table):
+        self._next_table = next_table
         
     def action(self):
         self._info.directory.start_recording()
@@ -79,39 +84,23 @@ class DecisionStep(Step):
         return self._next_table[self._decision_value]
         
 class CoastalPlanning(Step):
-    pass
+    def do(self):
+        municipality = self._info.directory.get_municipality()
+        municipality.coastal_planning(
+            self._info.directory.get_government().get_approved_complaints()
+        )        
+        return StepResult.no_cells_changed(self)
     
 class Hearing(Step):
-    pass
-        
-class SpawnAquacultureAgent(Step):
-    def action(self):
-        # reset round
-        for a in self._info.government.get_agents():
-            a.round_reset()    
-    
-        # choose a (random) cell
-        cell = self._info.aquaculture_spawner.choose_cell(self._info.map)
-        # create agent
-        agent = self._info.aquaculture_spawner.create(
-            self._info.agent_factory, 
-            cell
-        )
-        self._info.spawned_agent = agent
-        # tell the government
-        agent.notify_government()
-        return StepResult.no_cells_changed(self)
-        
-class Voting(Step):
     def do(self):
-        # government issues call for voting 
-        government = self._info.directory.get_government()
-        government.new_vote_round()
-        government.call_vote()        
+        self._info.directory.get_government().new_vote_round()
+        for agent in self._info.directory.get_voting_agents():
+            agent.hearing()
         return StepResult.no_cells_changed(self)
         
 class GovernmentDecision(DecisionStep):
    def do(self):
+        government = self._info.directory.get_government()
         decision = government.voting_decision()
         return (StepResult.no_cells_changed(self), decision)
 
@@ -120,7 +109,7 @@ class Fishing(Step):
         # Agents do profit activities
         government = self._info.directory.get_government()
         working_agents = self._info.directory.get_agents(exclude = government)
-        for a in working_agents: a.work()
+        #for a in working_agents: a.work()
         
         # (Local) Aquaculture companies pay some of their revenue to locals
         # through taxation

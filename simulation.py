@@ -15,7 +15,6 @@ class SimulationInfo(object):
         self.directory = directory
         self.agent_factory = agent_factory
         self.aquaculture_spawner = aquaculture_spawner
-        self.spawned_agent = None
 
 ## Simulation MAIN module ##
 class Simulation(multiprocessing.Process):
@@ -41,6 +40,14 @@ class Simulation(multiprocessing.Process):
             "Configuration not initiated. Run setup_config()"        
         directory = directory.Directory()
         agent_factory = entities.AgentFactory(self._directory, self._cfg)
+        
+        # Create government and municipality,
+        # which are automatically registered
+        # to the directory by their 
+        # constructors
+        agent_factory.government()
+        agent_factory.municipality()
+        
         cfg_struct = self._cfg['world']['structure']
         gs = world.GridStructure(
             cfg_struct['width'], 

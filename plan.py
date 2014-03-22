@@ -42,3 +42,11 @@ class Complaint(object):
     def __init__(self, cell):
         self.cell = cell
         self.approved = False
+        self.num = 1
+        
+    def add(self)
+        self.num += 1
+        
+class Decision(object):
+    APPROVE = 1000
+    REVIEW  = 2000

@@ -23,6 +23,10 @@ class AgentFactory(object):
     def aquaculture(self, home_cell):
         return self._produce_home(Aquaculture, "aquaculture", home_cell)
         
+    def municipality(self):
+        # TODO: municipality needs to have its own priorities
+        return self._produce(Municipality, "government")
+        
     def government(self):
         return self._produce(Government, "government")
         
@@ -81,6 +85,7 @@ class Municipality(CommunicatingAgent, PrioritizingAgent)
         self._decision_mechanism = decision_mechanism     
         self._taxes = {}
         self._capital = 0.0
+        self._plan = plan
         
     def round_reset(self):
         self._capital = 0.0
@@ -105,19 +110,19 @@ class Municipality(CommunicatingAgent, PrioritizingAgent)
                 "Tax benefit %02.2f to %s" % (amount, a.get_id())
             )
     
-    def coastal_planning(self, world_map, previous_plan=None, complaints=None):
-        plan = self.create_plan(world_map, previous_plan, complaints)
-        self.distribute_plan(plan)
+    def coastal_planning(self, world_map, complaints=None):
+        self.create_plan(world_map, complaints)
+        self.distribute_plan()
         
-    def create_plan(self, world_map, plan=None, complaints=None):
-        if plan is None:
+    def create_plan(self, world_map, complaints=None):
+        if self._plan is None:
             # If new plan, add all possible cells as aquaculture sites
             
             # TODO:
             #  Maybe divide into different kinds of areas first,
             #  maybe only 50% of the map for aquaculture.
             
-            plan = plan.CoastalPlan({
+            self._plan = plan.CoastalPlan({
                 c: plan.AQUACULTURE_SITE
                     for c in world_map.get_all_cells()
                     if not c.is_blocked()
@@ -128,15 +133,13 @@ class Municipality(CommunicatingAgent, PrioritizingAgent)
         if not complaints is None:
             for c in complaints:
                 if c.approved:
-                    plan[c.cell] = plan.RESERVED_ZONE
-                    
-        return plan
+                    self._plan[c.cell] = plan.RESERVED_ZONE
         
-    def distribute_plan(self, plan):
+    def distribute_plan(self):
         # Send a message to all interested parties
         for a in self.get_directory().get_agents(voting_only=True):
-            for cell in plan:
-                if plan[cell] == plan.AQUACULTURE_SITE:
+            for cell in self._plan:
+                if self._plan[cell] == plan.AQUACULTURE_SITE:
                     self.send_message(a, messages.TargetArea(
                         messages.MetaInfo(
                             self, a, self.get_directory().get_timestamp()
@@ -144,6 +147,17 @@ class Municipality(CommunicatingAgent, PrioritizingAgent)
                         cell
                     )
 
+class ComplaintApproveMoreThanOne(object):
+    def set_input_values(self, values):
+        assert "num_votes" in values, "Expected number of votes <num_votes>."
+        self._num_votes = values["num_votes"]
+        
+    def process(self):
+        # If more than one vote, approve complaint
+        self._approved = 1 if self._num_votes > 1 else 0
+        
+    def get_output_values(self):
+        return {"approve": self._approved}
 
 # Signatures:
 #   <>  handle_complaint(fisherman, cell, aquaculture)
@@ -155,7 +169,8 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         super(Government, self).__init__()
         self.register(directory, self.__class__)
         self.set_priorities(priorities)
-        self._decision_mechanism = decision_mechanism
+        self._decision_mechanism = decision_mechanism or
+            ComplaintApproveMoreThanOne()
         
     def new_vote_round(self):
         self._complaints = {}
@@ -168,24 +183,32 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         if message.vote == vote.DONT_BUILD:
             complaint = plan.Complaint(cell)
             if not cell in self._complaints:
-                self._complaints[cell] = []
-            self._complaints[cell].add(complaints)
+                self._complaints[cell] = complaint
+            else:
+                self._complaints[cell].add()
         
         # Broadcast the vote
         self.broadcast_message(
             messages.VoteResponseInform.reply_to(message, self.get_directory())
-        )
-        
-        # If all votes have been cast, make the decision
-        #all_voters = self.get_directory().get_all_agents(exclude = self)
-        if set(all_voters) == set(self._votes.keys()):
-            self.voting_decision()
+        )        
         
     def voting_decision(self):
         all_voters = self.get_directory().get_all_agents(exclude = self)
         assert set(all_voters) == set(self._votes.keys()),
             "Unexpected number of votes. Ensure that all votes are cast."
-        pass
+        for cell in self._complaints:
+            self._decision_mechanism.set_input_values({
+                "num_votes": self._complaints[cell].num
+            })
+            self._decision_mechanism.process()
+            self._complaints[cell].approved = 
+                self._decision_mechanism.get_output_values()["approve"] > 0.5
+        return plan.Decision.REVIEW 
+            if len(self.get_approved_complaints()) > 0
+            else plan.Decision.APPROVE
+
+    def get_approved_complaints(self):
+        return [c for c in self._complaints if c.approved]
         
     def call_vote(self):
         # Outdated maybe
@@ -234,9 +257,6 @@ class Fisherman(ProducedAgent):
         
         # run output through market
         self._capital += output
-        
-        
-    
         
     def vote_response_inform_notification(self, message):
         cell = message.vote_response.vote_call.target_message.cell
