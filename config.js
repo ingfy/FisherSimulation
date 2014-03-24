@@ -18,6 +18,12 @@
             "FishingIndustryExisting":       3.0,
             "NaturalFishHealth":             2.0,
             "AquacultureIndustryExisting":   1.0
+        },
+        "evolution": {
+            "elitism":                       3,
+            "selection mechanism":           "rank selection",
+            "crossover rate":                0.005,
+            "mutation rate":                 0.005
         }
     },
     "aquaculture": {

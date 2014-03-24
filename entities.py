@@ -134,6 +134,9 @@ class Municipality(CommunicatingAgent, PrioritizingAgent)
             for c in complaints:
                 if c.approved:
                     self._plan[c.cell] = plan.RESERVED_ZONE
+                    
+    def get_plan(self):
+        return self._plan
         
     def distribute_plan(self):
         # Send a message to all interested parties
@@ -158,6 +161,9 @@ class ComplaintApproveMoreThanOne(object):
         
     def get_output_values(self):
         return {"approve": self._approved}
+        
+class License(object):
+    pass
 
 # Signatures:
 #   <>  handle_complaint(fisherman, cell, aquaculture)
@@ -171,6 +177,12 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         self.set_priorities(priorities)
         self._decision_mechanism = decision_mechanism or
             ComplaintApproveMoreThanOne()
+        self._licenses = []
+        
+    def distribute_licenses(self):
+        num_licenses = 5
+        self._licenses = [License() for _ in xrange(num_licenses)]
+        return self._licenses
         
     def new_vote_round(self):
         self._complaints = {}
@@ -180,7 +192,7 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         
     def vote(self, message):
         cell = message.get_cell()
-        if message.vote == vote.DONT_BUILD:
+        if message.vote == vote.DISAPPROVE:
             complaint = plan.Complaint(cell)
             if not cell in self._complaints:
                 self._complaints[cell] = complaint
@@ -203,6 +215,7 @@ class Government(CommunicatingAgent, PrioritizingAgent):
             self._decision_mechanism.process()
             self._complaints[cell].approved = 
                 self._decision_mechanism.get_output_values()["approve"] > 0.5
+        
         return plan.Decision.REVIEW 
             if len(self.get_approved_complaints()) > 0
             else plan.Decision.APPROVE

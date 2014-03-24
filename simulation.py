@@ -6,15 +6,18 @@ import agent
 import phases
 import directory
 import time
+import ga
 import multiprocessing
 
 class SimulationInfo(object):
-    def __init__(self, map, cfg, directory, aquaculture_spawner):
+    def __init__(self, map, cfg, directory, aquaculture_spawner, 
+            learning_mechanisms):
         self.map = map
         self.cfg = cfg
         self.directory = directory
         self.agent_factory = agent_factory
         self.aquaculture_spawner = aquaculture_spawner
+        self.learning_mechanisms = learning_mechanisms
 
 ## Simulation MAIN module ##
 class Simulation(multiprocessing.Process):
@@ -61,12 +64,26 @@ class Simulation(multiprocessing.Process):
             self._cfg['fisherman']['num']
         )
         aquaculture_spawner = entities.AquacultureSpawner()
+       
+        
+        # Learning mechanisms
+        ## Fishermen
+        fisherman_learning = ga.Evolution(
+            ga.FishermanNNGenotype,
+            ga.FishermanNN,
+            directory.get_agents(type = entities.Fisherman),
+            ga.EvolutionConfig.from_dict(self._cfg['fisherman']['evolution'])
+        )
+                
         self._round = phases.Round(SimulationInfo(
             map, 
             self._cfg, 
             directory, 
             agent_factory, 
-            aquaculture_spawner
+            aquaculture_spawner,
+            {
+                entities.Fisherman: fisherman_learning
+            }
         ))
     
     def step(self):

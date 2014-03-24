@@ -49,7 +49,7 @@ class Step(object):
         self._next = next
         self.name = name
         
-    def action(self):
+    def do(self):
         raise NotImplementedException()
         
     def next(self):
@@ -58,7 +58,7 @@ class Step(object):
     def action(self):
         self._info.directory.start_recording()
         result = self.do()
-        result.messages = self._info.directory.start_recording()
+        result.messages = self._info.directory.stop_recording()
         return result
         
 class DecisionStep(Step):
@@ -74,7 +74,7 @@ class DecisionStep(Step):
         self._info.directory.start_recording()
         (decision, result) = self.do()
         self.decide(decision)
-        result.messages = self._info.directory.start_recording()
+        result.messages = self._info.directory.stop_recording()
         return result
         
     def decide(self, value):
@@ -82,7 +82,8 @@ class DecisionStep(Step):
         
     def next(self):
         return self._next_table[self._decision_value]
-        
+
+# Concrete steps        
 class CoastalPlanning(Step):
     def do(self):
         municipality = self._info.directory.get_municipality()
@@ -120,17 +121,29 @@ class Fishing(Step):
         
 class Building(Step):
     def do(self):
-        location = self._info.spawned_agent.get_location()
-        agent = self._info.spawned_agent
+        government = self._info.directory.get_government()
+        municipality = self._info.directory.get_municipality()
+        licenses = government.distribute_licenses()
+        spawner = self._info.aquaculture_spawner
+        plan = municipality.get_plan()
         blocking_radius = 100
-        affected_cells = self._info.map.build_aquaculture(
-            agent, 
-            location, 
-            blocking_radius
-        )
+        affected_cells = []
+        for licence in licences:
+            cell = spawner.choose_cell(plan)
+            aquaculture_agenet = spawner.create(
+                self._info.agent_factory,
+                cell
+            )            
+            affected_cells.add(self._info.map.build_aquaculture(
+                agent, 
+                location, 
+                blocking_radius
+            ))
         return StepResult.cells_changed(phase, affected_cells)
         
 class Learning(Step):
     def do(self):
-        influences = priority.Influences()
-        return StepResult([])
+        for group in self._info.learning_mechanisms:
+            self._info.learning_mechanisms[group].learn(self._info)
+        
+        return StepResult.no_cells_changed(self)
