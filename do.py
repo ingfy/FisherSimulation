@@ -1,3 +1,8 @@
+"""
+    do.py
+    Data Objects for sending to/from user interface
+"""
+
 import messages
 
 ## Objects to be sent through interface
@@ -13,9 +18,13 @@ class Map(object):
         self.grid = grid
         
     @classmethod
-    def from_world_map(c, world_map):
+    def from_world_map(c, world_map cells=None):
         s = world_map.get_structure()
-        return c([[Slot.from_world_slot(c) for c in r] for r in s.get_grid()])
+        return c([
+            [Slot.from_world_slot(c) if cells is None or c in cells else None
+                for c in r] 
+            for r in s.get_grid()]
+        )
         
 class Slot(object):
     """ 
@@ -64,6 +73,15 @@ class Message(object):
         )
         
 class PhaseReport(object):
-    def __init__(self, phase, messages, world_map):
+    def __init__(self, phase, messages, map):
         self.phase = phase.name
-        self.messages = [Message.from_message(world_map, m) for m in messages]
+        self.messages = messages
+        self.map = map
+        
+    @classmethod
+    def from_step_result(c, result, world_map):
+        return c(
+            result.phase,
+            [Message.from_message(world_map, m) for m in result.messages_sent],
+            Map.from_world_map(world_map, cells=result.cells_changed)
+        )

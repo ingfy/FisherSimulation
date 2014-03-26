@@ -46,6 +46,9 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
         self._capital = 0
         self.threats = []
         
+    def get_capital(self):
+        return self._capital
+        
     def target_notification(self, message):
         self.threats.add(message)        
         
@@ -275,9 +278,6 @@ class Fisherman(ProducedAgent):
         cell = message.vote_response.vote_call.target_message.cell
         if not cell in self._slot_knowledge:
             self._slot_knowledge[cell] = None
-
-    def go_fish(self, world_map):
-        return world_map.get_a_slot()
         
     def decide_vote(self, target_message):
         # complaint decision
@@ -346,16 +346,33 @@ class Aquaculture(ProducedAgent):
 #
 
 class Tourist(ProducedAgent):
+    def __init__(self, directory, priorities, home_cell, world_map, radius):
+        ProducedAgent.__init__(self, directory, priorities)
+        self._priority_slots = Tourist.calculate_priority_slots(
+            radius, world_map, home_cell
+        )
+        
+    def get_priority_slots(self):
+        return self._priority_slots
+
     def work(self):
         pass
        
     def decide_vote(self, target_message):
        return vote.DONT_BUILD
+       
+    @staticmethod
+    def calculate_priority_slots(care_radius, world_map, home_cell):
+        return world_map.get_radius_from(home_cell, care_radius)
+        
     
 # Signatures:
 #
 
 class Civilian(ProducedAgent):
+    def __init__(self, directory, priorities):
+        ProducedAgent.__init__(self, directory, priorities)
+
     def work(self):
         pass
         

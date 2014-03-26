@@ -64,14 +64,19 @@ class Evolution(LearningMechanism):
         dir = simulation_info.directory
         all_agents = dir.get_agents()
         fishermen = dir.get_agents(type = entities.Fisherman)
+        community_members = 
+            dir.get_agents(type = entities.Fisherman) +
+            dir.get_agents(type = entities.Aquaculture) +
+            dir.get_agents(type = entities.Civilian) +
+            dir.get_agents(type = entities.Tourist)
         market = simulation_info.market
         world_map = simulation_info.map
         aquaculture_agent = dir.get_agents(type = entities.Aquaculture)
         fitnesses = {
             agent: agent.get_priorities_satisfaction(
                 priority.Influences(
-                    agent, all_agents, market, fishermen, world_map, 
-                    aquaculture_agents
+                    agent, all_agents, market, community_members, fishermen, 
+                    world_map, aquaculture_agents
                 )
             ) for agent in self._agents
         }

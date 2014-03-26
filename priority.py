@@ -5,15 +5,28 @@ class Influences(object):
             agent = None, 
             all_agents = None, 
             market = None, 
-            fishermen = None, 
+            community_members = None,
+            fishermen = None,             
             world_map = None, 
             aquaculture_agents = None):
         self.agent = agent
         self.all_agents = all_agents
+        self.community_members = community_members
         self.market = market
         self.fishermen = fishermen
         self.world_map = world_map
         self.aquaculture_agents = aquaculture_agents
+        
+    def copy_for(self, agent):
+        return Influences(
+            agent,
+            self.all_agents,
+            self.market,
+            self.community_members,
+            self.fishermen,
+            self.world_map,
+            self.aquaculture_agents
+        )
 
 class Priority(object):
     # <dobule> calculate_value(...) should be implemented for all subclasses
@@ -40,32 +53,33 @@ class CommunityWealth(Priority):
     # Return the average capital of all agents that count as
     # community members.
     def calculate_value(self, influences):
-        members = [a for a in influences.all_agents if a.is_community_member()]
-        return sum([m.get_capital() for m in members])/len(members)    
+        members = [a for a in influences.community_members]
+        return float(sum([m.get_capital() for m in members]))/len(members)    
 
 class FishingIndustryExisting(Priority):
     def __init__(self):
         super(FishingIndustryExisting, self).__init__("Fishing Industry Existing")
         
     # Assume fisherman has methods:
-    #   is_fishing()    False if agent has changed occupation, True if still fishing.
-    # Check if fishermen are still fishing or have quit to move on to other things.
-    # Return fraction of (original) fishermen that are still fishing.
+    #   get_capital()    
+    # Return the average capital of fishermen. If fishermen turn over bad 
+    # profit, the industry won't continue existing.
     def calculate_value(self, influences):
-        return sum([1.0 if f.is_fishing() else 0.0 for f in influences.fishermen])/len(influences.fishermen)
+        return float(sum([f.get_capital() for f in influences.fishermen]))/
+                    len(influences.fishermen)
         
 class NaturalFishHealth(Priority):
     def __init__(self):
         super(NaturalFishHealth, self).__init__("Natural Fish Health")
        
     # Assume world map Slot has methods:
-    #   get_fish_status()   Fraction of fish health between 0.0 and 1.0
+    #   get_fish_quantity()   Fraction of fish health between 0.0 and 1.0
     # Assume that world_map has methods:
-    #   get_slots()         Returns an iterable of all the slots
+    #   get_all_cells()         Returns an iterable of all the slots
     # Retursn the average health of every slot on the map
     def calculate_value(self, influences):
-        slots = influences.world_map.get_slots()
-        return sum([s.get_fish_status() for s in slots])/len(slots)
+        slots = influences.world_map.get_all_cells()
+        return sum([s.get_fish_quantity() for s in slots])/len(slots)
 
 class AquacultureIndustryExisting(Priority):
     def __init__(self):
@@ -97,4 +111,6 @@ class PopulationHappiness(Priority):
     #   get_priorities_satisfaction()
     # Calculate the median happiness of agents
     def calculate_value(self, influences):
-        return numpy.median([a.get_priorities_satisfaction() for a in influences.agents])
+        return numpy.median([a.get_priorities_satisfaction(
+            influences.copy_for(a)
+        ) for a in influences.agents if a != influences.agent])

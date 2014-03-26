@@ -34,10 +34,7 @@ class Map(object):
             s.populate(factory.fisherman(s))
             
     def build_aquaculture(self, agent, cell, blocking_radius):
-        radius = self.get_radius(
-            blocking_radius, 
-            self._structure.get_cell_position(cell)
-        )
+        radius = self.get_radius_from(cell, blocking_radius)
         for b in radius:
             if not b == cell:
                 b.block()
@@ -45,6 +42,9 @@ class Map(object):
         cell.build_aquaculture(agent)
         
         return radius
+        
+    def get_radius_from(self, cell, r):
+        return self.get_radius(r, self._structure.get_cell_position(cell))
         
     def get_radius(self, r, pos):
         return self._structure.get_radius(r, pos)
