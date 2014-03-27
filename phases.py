@@ -1,6 +1,7 @@
 import vote
 import priority
 import entities
+import plan
 
 class Round(object):
     def __init__(self, info):
@@ -10,12 +11,12 @@ class Round(object):
         FISHING1 = Fishing(info, BUILDING, "FISHING1")
         GOVDECISION = GovernmentDecision(info, None, "GOVDECISION")
         HEARING = Hearing(info, GOVDECISION, "HEARING")
-        COASTPLAN = CoastalPlanning(info, Hearing, "SPAWNING")
+        COASTPLAN = CoastalPlanning(info, Hearing, "COASTPLAN")
         GOVDECISION.set_next_table({ 
             plan.Decision.APPROVE: FISHING1, 
-            vote.Decision.REVIEW: COASTPLAN 
+            plan.Decision.REVIEW: COASTPLAN 
         })
-        self._current_step = self._start = SPAWNING
+        self._current_step = self._start = COASTPLAN
         self._round_counter = 0
         
     def next(self):
@@ -30,17 +31,18 @@ class Round(object):
         return self._round_counter
         
 class StepResult(object):
-    def __init__(self, phase, messages_sent, cells_changed)
+    def __init__(self, phase, messages_sent, cells_changed, world_map):
         self.phase = phase
         self.messages_sent = messages_sent
         self.cells_changed = cells_changed
+        self.world_map = world_map
         
     @classmethod
-    def cells_changed(c, phase, cells_changed):
-        return c(phase, [], cells_changed)
+    def cells_changed(c, phase, cells_changed, world_map):
+        return c(phase, [], cells_changed, world_map)
         
     @classmethod
-    def no_cells_changed(c, phase):
+    def no_cells_changed(c, phase, world_map):
         return c(phase, [], [])
         
 class Step(object):
@@ -63,7 +65,7 @@ class Step(object):
         
 class DecisionStep(Step):
     def __init__(self, info, next_table, name):
-        self.Step(info, None, name)
+        Step.__init__(self, info, None, name)
         self.set_next_table(next_table)
         self._decision_value = None
         
@@ -83,27 +85,31 @@ class DecisionStep(Step):
     def next(self):
         return self._next_table[self._decision_value]
 
-# Concrete steps        
+"""
+    Concrete Step Implementations
+"""
 class CoastalPlanning(Step):
     def do(self):
         municipality = self._info.directory.get_municipality()
         municipality.coastal_planning(
             self._info.directory.get_government().get_approved_complaints()
         )        
-        return StepResult.no_cells_changed(self)
+        return StepResult.no_cells_changed(self, self._info.world_map)
     
 class Hearing(Step):
     def do(self):
         self._info.directory.get_government().new_vote_round()
         for agent in self._info.directory.get_voting_agents():
             agent.hearing()
-        return StepResult.no_cells_changed(self)
+        return StepResult.no_cells_changed(self, self._info.world_map)
         
 class GovernmentDecision(DecisionStep):
    def do(self):
         government = self._info.directory.get_government()
         decision = government.voting_decision()
-        return (StepResult.no_cells_changed(self), decision)
+        return (
+            StepResult.no_cells_changed(self, self._info.world_map), decision
+        )
 
 class Fishing(Step):
     def do(self):
@@ -117,7 +123,7 @@ class Fishing(Step):
         for a in self._info.directory.get_agents(type = entities.Aquaculture):
             a.pay_taxes()
         
-        return StepResult.no_cells_changed(self)
+        return StepResult.no_cells_changed(self, self._info.world_map)
         
 class Building(Step):
     def do(self):
@@ -139,11 +145,13 @@ class Building(Step):
                 location, 
                 blocking_radius
             ))
-        return StepResult.cells_changed(phase, affected_cells)
+        return StepResult.cells_changed(
+            phase, affected_cells, self._info.world_map
+        )
         
 class Learning(Step):
     def do(self):
         for group in self._info.learning_mechanisms:
             self._info.learning_mechanisms[group].learn(self._info)
         
-        return StepResult.no_cells_changed(self)
+        return StepResult.no_cells_changed(self, self._info.world_map)

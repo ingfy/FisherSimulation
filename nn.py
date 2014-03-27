@@ -1,5 +1,12 @@
 import random
 
+def convert_edge_tuples(edges):
+    out = {}
+    for (label_a, label_b), value in edges:
+        if not label_a in out:
+            out[label_a] = {}
+        out[label_a][label_b] = value
+    return out
 
 class LabeledNeuralNetwork(object):
 
@@ -14,21 +21,31 @@ class LabeledNeuralNetwork(object):
         self.hiddens = {label: Neuron(0.0, Neuron.HIDDEN) for label in hiddens}
         connectivity_valid, err = self.validate_edges(edges)
         assert connectivity_valid, "Invalid edges. " + err
-        self.edges = edges
+        self.edges = convert_edge_tuples(edges)
+        
+    def labels(self):
+        return [e for l in [self.inputs, self.hiddens, self.outputs] 
+            for e in l.keys()]
     
     def neurons(self):
-        return self.inputs + self.hiddens + self.outputs
+        return [e for l in [self.inputs, self.hiddens, self.outputs] 
+            for e in l.values()]            
         
     def validate_edges(self, edges):
         # Check that all labels in connectivity have a match
-        n = self.neurons()
-        for a, b, v in edges:
+        n = self.labels()
+        marked = {l: False for l in n}
+        for (a, b), v in edges:
             for e in [a, b]:
                 if not e in n:
                     return False, "%s is not a label." % e
+                marked[e] = True
+        for l in marked:
+            if not marked[l]:
+                return False, "%s is isolated." % l
         return True, None
         
-    def set_input_values(self, values = {})
+    def set_input_values(self, values = {}):
         for l in labeled_values:
             self.inputs[l].value = values[l]
             

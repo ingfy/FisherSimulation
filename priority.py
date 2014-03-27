@@ -43,6 +43,20 @@ class OwnProfits(Priority):
     def calculate_value(self, influences):
         return influences.agent.get_capital()
         
+class WildFishPrice(Priority):
+    def __init__(self):
+        super(WildFishPrice, self).__init__("Wild Fish Price")
+        
+    def calculate_value(self, influences):
+        return infleucnes.market.get_wild_fish_price()
+        
+class SalmonPrice(Priority):
+    def __init__(self):
+        super(SalmonPrice, self).__init__("Salmon Price")
+        
+    def calculate_value(self, influences):
+        return infleucnes.market.get_farmed_fish_price()
+        
 class CommunityWealth(Priority):
     def __init__(self):
         super(CommunityWealth, self).__init__("Community Wealth")
@@ -65,8 +79,9 @@ class FishingIndustryExisting(Priority):
     # Return the average capital of fishermen. If fishermen turn over bad 
     # profit, the industry won't continue existing.
     def calculate_value(self, influences):
-        return float(sum([f.get_capital() for f in influences.fishermen]))/
-                    len(influences.fishermen)
+        return float(
+            sum([f.get_capital() for f in influences.fishermen])
+            )/len(influences.fishermen)
         
 class NaturalFishHealth(Priority):
     def __init__(self):

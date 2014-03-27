@@ -44,13 +44,13 @@ class Directory(object):
         
     def get_municipality(self):
         muns = self.get_agents(type = entities.Municipality)
-        assert len(muns) == 1,
+        assert len(muns) == 1, \
             "Unexpected number of municipalities: %d" % len(muns)
         return muns[0]
         
     def get_government(self):
         govs = self.get_agents(type = entities.Government)        
-        assert len(govs) == 1, 
+        assert len(govs) == 1, \
             "Unexpected number of governments: %d" % len(govs)        
         return govs[0]
          

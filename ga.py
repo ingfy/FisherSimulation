@@ -21,38 +21,11 @@ class EvolutionarySelectionPhenotype(object):
         self.phenotype = phenotype
         self.fitness = fitness
         
-class EvolutionConfig(object):
-    SELECTION_MECHANISMS = {
-        "rank": Evolution.rank_selection,
-        "rank selection": Evolution.rank_selection,
-        "default": Evolution.rank_selection
-    }
-    def __init__(self, elitism, selection_mechanism, crossover_rate, 
-            mutation_rate):
-        self.elitism = elitism
-        self.selection_mechanism = selection_mechanism
-        self.crossover_rate = crossover_rate
-        self.mutation_rate = mutation_rate
-        
-    @classmethid
-    def from_dict(c, dict):
-        elitism = int(dict["elitism"])
-        selection_mechanism = EvolutionConfig.SELECTION_MECHANISMS.get(
-            dict["selection mechanism"], 
-            EvolutionConfig.SELECTION_MECHANISMS["default"]
-        )
-        crossover_rate = float(dict["crossover rate"])
-        mutation_rate = float(dict["mutation rate"])
-        return c(
-            elitism,
-            selection_mechanism,
-            crossover_rate,
-            mutation_rate
-        )
+
         
 class Evolution(LearningMechanism):
     def __init__(self, phenotype, genotype, agents, config):
-        self.LearningMechanism(agents)
+        LearningMechanism.__init__(self, agents)
         self._phenotype = phenotype
         self._genotype = genotype
         self._elitism = config.elitism
@@ -64,10 +37,10 @@ class Evolution(LearningMechanism):
         dir = simulation_info.directory
         all_agents = dir.get_agents()
         fishermen = dir.get_agents(type = entities.Fisherman)
-        community_members = 
-            dir.get_agents(type = entities.Fisherman) +
-            dir.get_agents(type = entities.Aquaculture) +
-            dir.get_agents(type = entities.Civilian) +
+        community_members = \
+            dir.get_agents(type = entities.Fisherman) + \
+            dir.get_agents(type = entities.Aquaculture) + \
+            dir.get_agents(type = entities.Civilian) + \
             dir.get_agents(type = entities.Tourist)
         market = simulation_info.market
         world_map = simulation_info.map
@@ -137,6 +110,35 @@ class Evolution(LearningMechanism):
                 if r > wheel[p]:
                     selected[i] = p
         return selected
+        
+class EvolutionConfig(object):
+    SELECTION_MECHANISMS = {
+        "rank": Evolution.rank_selection,
+        "rank selection": Evolution.rank_selection,
+        "default": Evolution.rank_selection
+    }
+    def __init__(self, elitism, selection_mechanism, crossover_rate, 
+            mutation_rate):
+        self.elitism = elitism
+        self.selection_mechanism = selection_mechanism
+        self.crossover_rate = crossover_rate
+        self.mutation_rate = mutation_rate
+        
+    @classmethod
+    def from_dict(c, dict):
+        elitism = int(dict["elitism"])
+        selection_mechanism = EvolutionConfig.SELECTION_MECHANISMS.get(
+            dict["selection mechanism"], 
+            EvolutionConfig.SELECTION_MECHANISMS["default"]
+        )
+        crossover_rate = float(dict["crossover rate"])
+        mutation_rate = float(dict["mutation rate"])
+        return c(
+            elitism,
+            selection_mechanism,
+            crossover_rate,
+            mutation_rate
+        )
             
 
 class Phenotype(object):
@@ -203,7 +205,7 @@ class FishermanNN(Phenotype, DecisionMechanism):
 
     def __init__(self, genotype):
         self.genotype = genotype        
-        self.connctions = [
+        self.connections = [
             # All inputs to all hidden neurons
             (a, b) for a in self.inputs for b in self.hiddens       
         ] + [
@@ -214,12 +216,15 @@ class FishermanNN(Phenotype, DecisionMechanism):
             (a, a) for a in self.hiddens
         ]
         self.edges = zip(self.connections, 
-            [float(e) / 2**NNGenotype.precision for e in 
-                self.genome.to_number_list()])
-        self.network = nn.LabeledNeuralNetwork(inputs, outputs, hiddens, edges)
+            [float(e) / 2**FishermanNNGenotype.precision for e in 
+                self.genotype.to_number_list()])
+        self.network = nn.LabeledNeuralNetwork(
+            FishermanNN.inputs, FishermanNN.outputs, FishermanNN.hiddens, 
+            self.edges
+        )
         
     def set_input_values(self, inputs):
-        self.network.set_input_values(inputs):
+        self.network.set_input_values(inputs)
         
     def process(self):
         self.network.update()
@@ -231,11 +236,12 @@ class FishermanNN(Phenotype, DecisionMechanism):
 class FishermanNNGenotype(Genotype):
     phenotype_class = FishermanNN
     precision = 8  # bits per 1
+    weight_range = (-1, 1)
     length = (
         len(phenotype_class.inputs)  * len(phenotype_class.hiddens) +
         len(phenotype_class.hiddens) * len(phenotype_class.outputs) +
         len(phenotype_class.hiddens)
-    ) * (weight_range[1] - weight_range[0]) * weight_precision
+    ) * (weight_range[1] - weight_range[0]) * precision
     
     def to_number_list(self):
         def sep(str, acc):

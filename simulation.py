@@ -3,46 +3,41 @@ import entities
 import world 
 import sys
 import agent
+import market
 import phases
 import directory
+import do
 import time
 import ga
 import multiprocessing
 
 class SimulationInfo(object):
-    def __init__(self, map, cfg, directory, aquaculture_spawner, 
-            learning_mechanisms):
+    def __init__(self, map, cfg, directory, market, agent_factory, 
+            aquaculture_spawner, learning_mechanisms):
         self.map = map
         self.cfg = cfg
         self.directory = directory
+        self.market = market
         self.agent_factory = agent_factory
         self.aquaculture_spawner = aquaculture_spawner
         self.learning_mechanisms = learning_mechanisms
+        
 
 ## Simulation MAIN module ##
-class Simulation(multiprocessing.Process):
+class Simulation(object):
     def __init__(self):
-        multiprocessing.Process.__init__(self)
         self._cfg = None
-        self._want_abort = False
-        self._round = Round(self)
+        self._round = None
     
     def setup_config(self, cfg = None):
         self._cfg = config.load(varargs = None)
         
-    def reset(self):
-        self._directory = None
-        self._map = None
-        self._aquaculture_spawner = None
-        
-    def get_map(self):
-        return self._map
-        
     def initialize(self):
-        assert self._cfg is not None, 
+        assert not self._cfg is None, \
             "Configuration not initiated. Run setup_config()"        
-        directory = directory.Directory()
-        agent_factory = entities.AgentFactory(self._directory, self._cfg)
+            
+        dir = directory.Directory()
+        agent_factory = entities.AgentFactory(dir, self._cfg)
         
         # Create government and municipality,
         # which are automatically registered
@@ -60,65 +55,44 @@ class Simulation(multiprocessing.Process):
         )
         map = world.Map(gs)
         map.populate_fishermen(
-            self._agent_factory, 
+            agent_factory, 
             self._cfg['fisherman']['num']
         )
         aquaculture_spawner = entities.AquacultureSpawner()
-       
         
         # Learning mechanisms
         ## Fishermen
         fisherman_learning = ga.Evolution(
             ga.FishermanNNGenotype,
             ga.FishermanNN,
-            directory.get_agents(type = entities.Fisherman),
+            dir.get_agents(type = entities.Fisherman),
             ga.EvolutionConfig.from_dict(self._cfg['fisherman']['evolution'])
         )
-                
-        self._round = phases.Round(SimulationInfo(
+        
+        info = SimulationInfo(
             map, 
             self._cfg, 
-            directory, 
+            dir, 
+            market.Market(),
             agent_factory, 
             aquaculture_spawner,
             {
                 entities.Fisherman: fisherman_learning
             }
-        ))
+        )
+                
+        self._round = phases.Round(info)
+        
+        return do.Simulation.from_simulation_info(info)
     
     def step(self):
         result = self._round.next()
         return do.PhaseReport.from_step_result(result)
-   
-    def run_rounds(self, rounds):
-        while not self._want_abort and self._round.rounds() < rounds:
-            self._round.next()
-        if not self._want_abort:
-            self.wait()
-        
-    def run_steps(self, steps):
-        while not self._want_abort and steps > 0:
-            self._round.next()
-            steps -= 1
-        if not self._want_abort:
-            self.wait()
-            
-    def run_inf(self):
-        while not self._want_abort:
-            self._round.next()
-        
-    def abort(self):
-        self._want_abort = True
-                    
-    def run(self):
-        self.wait()
     
 def main():
     s = Simulation()
     s.setup_config()
-    s.initialize()
-    s.start()
-    s.join()
+    map = s.initialize()
     return 0
 
 if __name__ == "__main__":

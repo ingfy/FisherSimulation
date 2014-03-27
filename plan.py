@@ -44,7 +44,7 @@ class Complaint(object):
         self.approved = False
         self.num = 1
         
-    def add(self)
+    def add(self):
         self.num += 1
         
 class Decision(object):

@@ -1,4 +1,4 @@
-from agent import VotingAgent, PrioritizingAgent, CommunicatingAgent
+from agent import VotingAgent, PrioritizingAgent, CommunicatingAgent, WorkingAgent
 import messages
 import vote
 import random
@@ -59,7 +59,7 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
                 self.get_directory().get_government(),
                 messages.VoteResponse.reply_to(
                     target_message, 
-                    self.get_directory()                    
+                    self.get_directory(),              
                     vote
                 )
             )
@@ -80,7 +80,7 @@ class AquacultureSpawner(object):
 
         
 # Handles the planning
-class Municipality(CommunicatingAgent, PrioritizingAgent)
+class Municipality(CommunicatingAgent, PrioritizingAgent):
     def __init__(self, directory, priorities, decision_mechanism=None):
         super(Municipality, self).__init__()
         self.register(directory, self.__class__)
@@ -96,7 +96,7 @@ class Municipality(CommunicatingAgent, PrioritizingAgent)
     def collect_tax(sender, amount):
         self.send_message(sender, messages.Inform(
             "Tax received %02.2f from %s" % (amount, sender.get_id())
-        )
+        ))
         self._capital += amount
         if not sender in self._taxes:
             self._taxes[sender] = []
@@ -111,7 +111,7 @@ class Municipality(CommunicatingAgent, PrioritizingAgent)
             a.give(amount)
             self.send_message(a, messages.Inform(
                 "Tax benefit %02.2f to %s" % (amount, a.get_id())
-            )
+            ))
     
     def coastal_planning(self, world_map, complaints=None):
         self.create_plan(world_map, complaints)
@@ -151,7 +151,7 @@ class Municipality(CommunicatingAgent, PrioritizingAgent)
                             self, a, self.get_directory().get_timestamp()
                         ),
                         cell
-                    )
+                    ))
 
 class ComplaintApproveMoreThanOne(object):
     def set_input_values(self, values):
@@ -178,8 +178,8 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         super(Government, self).__init__()
         self.register(directory, self.__class__)
         self.set_priorities(priorities)
-        self._decision_mechanism = decision_mechanism or
-            ComplaintApproveMoreThanOne()
+        self._decision_mechanism = \
+            decision_mechanism or ComplaintApproveMoreThanOne()
         self._licenses = []
         
     def distribute_licenses(self):
@@ -209,18 +209,18 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         
     def voting_decision(self):
         all_voters = self.get_directory().get_all_agents(exclude = self)
-        assert set(all_voters) == set(self._votes.keys()),
+        assert set(all_voters) == set(self._votes.keys()), \
             "Unexpected number of votes. Ensure that all votes are cast."
         for cell in self._complaints:
             self._decision_mechanism.set_input_values({
                 "num_votes": self._complaints[cell].num
             })
             self._decision_mechanism.process()
-            self._complaints[cell].approved = 
+            self._complaints[cell].approved = \
                 self._decision_mechanism.get_output_values()["approve"] > 0.5
         
-        return plan.Decision.REVIEW 
-            if len(self.get_approved_complaints()) > 0
+        return plan.Decision.REVIEW \
+            if len(self.get_approved_complaints()) > 0 \
             else plan.Decision.APPROVE
 
     def get_approved_complaints(self):
@@ -293,12 +293,12 @@ class Fisherman(ProducedAgent):
                                         else 0.0
         })
         self.decision_mechanism.process()
-        return vote.DONT_BUILD if
-            self.decision_mechanism.get_output_values()["vote"] > 0.5
+        return vote.DONT_BUILD if \
+            self.decision_mechanism.get_output_values()["vote"] > 0.5 \
             else vote.BUILD  
 
 class Aquaculture(ProducedAgent):
-     def __init__(self, directory, priorities, home, decision_mechanism=None):
+    def __init__(self, directory, priorities, home, decision_mechanism=None):
         ProducedAgent.__init__(self, directory, priorities)
         self._home = home
         self.decision_mechanism = decision_mechanism
@@ -334,8 +334,8 @@ class Aquaculture(ProducedAgent):
                                         else 0.0
         })
         self.decision_mechanism.process()
-        return vote.DONT_BUILD if
-            self.decision_mechanism.get_output_values()["vote"] > 0.5
+        return vote.DONT_BUILD if \
+            self.decision_mechanism.get_output_values()["vote"] > 0.5 \
             else vote.BUILD
         
     def notify_government(self):

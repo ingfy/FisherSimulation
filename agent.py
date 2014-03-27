@@ -23,12 +23,12 @@ class CommunicatingAgent(IdentifyingAgent):
     # Registers the agents to the directory, storing the directory
     # in the agent, and giving its own identifier away to the 
     # directory so it can be looked up later.
-    def register(self, directory, type=None):
+    def register(self, directory, type=None, voting=False):
         self._directory = directory
-        directory.register_communicating_agent(self, type)
+        directory.register_communicating_agent(self, type, voting)
     
     def get_directory(self):
-        assert self._directory is not None, 
+        assert self._directory is not None, \
             "No directory defined for %s." % self.get_id()
         return self._directory
         
@@ -77,7 +77,7 @@ class VotingAgent(CommunicatingAgent):
                 message, 
                 self.get_directory(),
                 decision
-        )
+        ))
         
 class WorkingAgent(object):
     def work(self):

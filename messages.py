@@ -35,7 +35,7 @@ class Reply(Message):
     
 ### Specific messages
 
-class TargetArea(DeclareIntention):
+class TargetArea(Message):
     def __init__(self, metainfo, cell):
         Message(self, metainfo)
         self.cell = cell
@@ -44,10 +44,10 @@ class TargetArea(DeclareIntention):
         recipient.target_notification(self)
         
     def get_str_summary(self, world_map):
-        return "Cell targeted at: (%d, %d)" % 
+        return "Cell targeted at: (%d, %d)" % \
             world_map.get_structure().get_cell_position(self.cell)
         
-class VoteCall(Message, Reply):
+class VoteCall(Reply):
     def __init__(self, metainfo, target_message):
         Message(self, metainfo)
         self.target_message = target_message
@@ -56,12 +56,12 @@ class VoteCall(Message, Reply):
         recipient.vote_call_notification(self)
         
     def get_str_summary(self, world_map):
-        return "Call for vote targeted at: (%d, %d)" %
+        return "Call for vote targeted at: (%d, %d)" % \
             world_map.get_structure().get_cell_position(
                 self.target_mesasge.cell
             )
 
-class VoteResponse(Message, Reply):
+class VoteResponse(Reply):
     def __init__(self, metainfo, target_message, vote):
         Message(self, metainfo)
         self.target_message = target_message        
@@ -82,16 +82,16 @@ class VoteResponse(Message, Reply):
         recipient.vote(self)
         
     def get_str_summary(self, world_map, str): 
-        return  "Vote approve for cell : (%d, %d)" if 
-            self.vote == vote.APPROVE else 
-            "Vote COMPLAIN for cell: (%d, %d)" % 
+        return  "Vote approve for cell : (%d, %d)" if \
+            self.vote == vote.APPROVE else \
+            "Vote COMPLAIN for cell: (%d, %d)" % \
                 world_map.get_structure().get_cell_position(
                     self.vote_call.target_message.cell
                 )
             
-class VoteResponseInform(Message, Reply):
+class VoteResponseInform(Reply):
     def __init__(self, metainfo, vote_response):
-        Message(self, metainfo):
+        Message(self, metainfo)
         self.vote_response = vote_response
         
     def reaction(self, recipient):
@@ -100,7 +100,6 @@ class VoteResponseInform(Message, Reply):
     def get_str_summary(self):
         return "Agent %s voted %s." % (
             self.vote_response.metainfo.sender.get_id(),
-            "APPROVE" if 
-                self.vote_response.vote == vote.APPROVE else 
-                "COMPLAINT"
+            "APPROVE" if self.vote_response.vote == vote.APPROVE \
+                else "COMPLAINT"
         )
