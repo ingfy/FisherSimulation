@@ -45,22 +45,24 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
         self.set_priorities(priorities)
         self._capital = 0
         self.threats = []
+        self._plan_message = None
         
     def get_capital(self):
-        return self._capital
+        return self._capital        
         
-    def target_notification(self, message):
-        self.threats.add(message)        
+    def plan_notification(self, message):
+        self.plan_message = message
         
-    def hearing(self):
-        for target_message in self._threats:
-            vote = self.decide_vote(target_message)
+    def hearing(self):        
+        votes = self.decide_votes(hearing.plan)
+        for vote in votes:
             self.send_message(
                 self.get_directory().get_government(),
                 messages.VoteResponse.reply_to(
-                    target_message, 
                     self.get_directory(),              
-                    vote
+                    hearing.plan, 
+                    vote.cell,
+                    vote.value
                 )
             )
         
@@ -88,10 +90,11 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
         self._decision_mechanism = decision_mechanism     
         self._taxes = {}
         self._capital = 0.0
-        self._plan = plan
+        self._plan = None
         
     def round_reset(self):
         self._capital = 0.0
+        self._plan = None
     
     def collect_tax(sender, amount):
         self.send_message(sender, messages.Inform(
@@ -143,15 +146,14 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
         
     def distribute_plan(self):
         # Send a message to all interested parties
-        for a in self.get_directory().get_agents(voting_only=True):
-            for cell in self._plan:
-                if self._plan[cell] == plan.AQUACULTURE_SITE:
-                    self.send_message(a, messages.TargetArea(
-                        messages.MetaInfo(
-                            self, a, self.get_directory().get_timestamp()
-                        ),
-                        cell
-                    ))
+        for a in self.get_directory().get_agents(only_voters=True):
+            for cell in self._plan.aquaculture_sites():
+                self.send_message(a, messages.TargetArea(
+                    messages.MetaInfo(
+                        self, a, self.get_directory().get_timestamp()
+                    ),
+                    cell
+                ))
 
 class ComplaintApproveMoreThanOne(object):
     def set_input_values(self, values):
@@ -279,7 +281,7 @@ class Fisherman(ProducedAgent):
         if not cell in self._slot_knowledge:
             self._slot_knowledge[cell] = None
         
-    def decide_vote(self, target_message):
+    def decide_votes(self, plan):
         # complaint decision
         # returns vote.BUILD or vote.DONT_BUILD
         self.decision_mechanism.set_input_values({
@@ -293,9 +295,9 @@ class Fisherman(ProducedAgent):
                                         else 0.0
         })
         self.decision_mechanism.process()
-        return vote.DONT_BUILD if \
+        return vote.DISAPPROVE if \
             self.decision_mechanism.get_output_values()["vote"] > 0.5 \
-            else vote.BUILD  
+            else vote.APPROVE
 
 class Aquaculture(ProducedAgent):
     def __init__(self, directory, priorities, home, decision_mechanism=None):
@@ -320,7 +322,7 @@ class Aquaculture(ProducedAgent):
         government = self.directory.get_government()
         government.collect_tax(self, self._capital * self._taxation)
         
-    def decide_vote(self, target_message):
+    def decide_votes(self, plan):
         # complaint decision
         # returns vote.BUILD or vote.DONT_BUILD
         self.decision_mechanism.set_input_values({
@@ -358,7 +360,7 @@ class Tourist(ProducedAgent):
     def work(self):
         pass
        
-    def decide_vote(self, target_message):
+    def decide_votes(self, plan):
        return vote.DONT_BUILD
        
     @staticmethod
@@ -376,5 +378,5 @@ class Civilian(ProducedAgent):
     def work(self):
         pass
         
-    def decide_vote(self, target_message):
+    def decide_votes(self, plan):
         return vote.BUILD

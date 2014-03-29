@@ -35,46 +35,36 @@ class Reply(Message):
     
 ### Specific messages
 
-class TargetArea(Message):
-    def __init__(self, metainfo, cell):
-        Message(self, metainfo)
-        self.cell = cell
+class PlanHearing(Message):
+    def __init__(self, metainfo, plan):
+        Message.__init__(self, metainfo)
+        self.plan = plan
         
     def reaction(self, recipient):
-        recipient.target_notification(self)
+        recipient.plan_hearing_notification(self)
         
-    def get_str_summary(self, world_map):
-        return "Cell targeted at: (%d, %d)" % \
-            world_map.get_structure().get_cell_position(self.cell)
-        
-class VoteCall(Reply):
-    def __init__(self, metainfo, target_message):
-        Message(self, metainfo)
-        self.target_message = target_message
-        
-    def reaction(self, recipient):
-        recipient.vote_call_notification(self)
-        
-    def get_str_summary(self, world_map):
-        return "Call for vote targeted at: (%d, %d)" % \
-            world_map.get_structure().get_cell_position(
-                self.target_mesasge.cell
-            )
+    def get_str_summary(self):
+        return "Plan distributed with: \n\t" + ", and \n\t".join(
+            "%d aquaculture sites" % len(self.plan.aquaculture_sites()),
+            "%d reserved zones" % len(self.plan.reserved_zones())
+        )
 
 class VoteResponse(Reply):
-    def __init__(self, metainfo, target_message, vote):
-        Message(self, metainfo)
-        self.target_message = target_message        
+    def __init__(self, metainfo, plan_hearing, cell, vote):
+        Message.__init__(self, metainfo)
+        self.plan_hearing = plan_hearing    
+        self.cell = cell
         self.vote = vote
         
     def get_cell(self):
-        return self.target_message.cell
+        return self.cell
         
     @classmethod
-    def reply_to(c, message, directory, vote):
+    def reply_to(c, directory, message, cell, vote):
         return c(
             message.metainfo.reply(directory.get_timestamp()),
             message,
+            cell,
             vote
         )
         
@@ -91,7 +81,7 @@ class VoteResponse(Reply):
             
 class VoteResponseInform(Reply):
     def __init__(self, metainfo, vote_response):
-        Message(self, metainfo)
+        Message.__init__(self, metainfo)
         self.vote_response = vote_response
         
     def reaction(self, recipient):

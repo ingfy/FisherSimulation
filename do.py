@@ -28,7 +28,7 @@ class Simulation(object):
         self.fishermen = fishermen
         self.aquaculture_agents = aquaculture_agents
         self.civilians = civilians
-        self.tourists = touristss
+        self.tourists = tourists
         
     @classmethod
     def from_simulation_info(c, info):
@@ -61,19 +61,19 @@ class WorkingAgent(object):
             object.get_id(),
             object.get_capital()
         )
-        
+
 class Fisherman(WorkingAgent):
     pass
-    
+
 class Civilian(WorkingAgent):
     pass
-    
+
 class Tourist(WorkingAgent):
     pass
-    
+
 class Aquaculture(WorkingAgent):
     pass
-        
+
 class Map(object):
     """A structured container for all the cells in the world.
     

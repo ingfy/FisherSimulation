@@ -1,3 +1,16 @@
+"""
+Implementation of the overall simulation process, divided into steps.
+
+Phases:
+    CoastalPlanning
+    Hearing
+    GovernmentDecision
+    Fishing
+    Building
+    Learning
+"""
+
+
 import vote
 import priority
 import entities
@@ -11,7 +24,7 @@ class Round(object):
         FISHING1 = Fishing(info, BUILDING, "FISHING1")
         GOVDECISION = GovernmentDecision(info, None, "GOVDECISION")
         HEARING = Hearing(info, GOVDECISION, "HEARING")
-        COASTPLAN = CoastalPlanning(info, Hearing, "COASTPLAN")
+        COASTPLAN = CoastalPlanning(info, HEARING, "COASTPLAN")
         GOVDECISION.set_next_table({ 
             plan.Decision.APPROVE: FISHING1, 
             plan.Decision.REVIEW: COASTPLAN 
@@ -20,11 +33,11 @@ class Round(object):
         self._round_counter = 0
         
     def next(self):
+        result = self._current_step.action()
         self._current_step = self._current_step.next()
         if self._current_step is None:
             self._round_counter += 1
-            self._current_step = self._start
-        result = self._current_step.action()
+            self._current_step = self._start        
         return result
        
     def rounds(self):
@@ -43,72 +56,76 @@ class StepResult(object):
         
     @classmethod
     def no_cells_changed(c, phase, world_map):
-        return c(phase, [], [])
-        
+        return c(phase, [], [], world_map)
+
+## Abstract Step classes ##
+
 class Step(object):
     def __init__(self, info, next, name):
         self._info = info
         self._next = next
         self.name = name
-        
+
     def do(self):
         raise NotImplementedException()
-        
+
     def next(self):
         return self._next
-        
+
     def action(self):
+        print self
         self._info.directory.start_recording()
         result = self.do()
         result.messages = self._info.directory.stop_recording()
         return result
-        
+
 class DecisionStep(Step):
     def __init__(self, info, next_table, name):
         Step.__init__(self, info, None, name)
         self.set_next_table(next_table)
         self._decision_value = None
-        
+
     def set_next_table(self, next_table):
         self._next_table = next_table
-        
+
     def action(self):
         self._info.directory.start_recording()
         (decision, result) = self.do()
         self.decide(decision)
         result.messages = self._info.directory.stop_recording()
         return result
-        
+
     def decide(self, value):
         self._decision_value = value
-        
+
     def next(self):
         return self._next_table[self._decision_value]
 
-"""
-    Concrete Step Implementations
-"""
+
+## Concrete Step Implementations ##
+
 class CoastalPlanning(Step):
     def do(self):
         municipality = self._info.directory.get_municipality()
         municipality.coastal_planning(
+            self._info.map,
             self._info.directory.get_government().get_approved_complaints()
         )        
-        return StepResult.no_cells_changed(self, self._info.world_map)
+        return StepResult.no_cells_changed(self, self._info.map)
     
 class Hearing(Step):
     def do(self):
         self._info.directory.get_government().new_vote_round()
         for agent in self._info.directory.get_voting_agents():
             agent.hearing()
-        return StepResult.no_cells_changed(self, self._info.world_map)
+        return StepResult.no_cells_changed(self, self._info.map)
         
 class GovernmentDecision(DecisionStep):
    def do(self):
         government = self._info.directory.get_government()
         decision = government.voting_decision()
         return (
-            StepResult.no_cells_changed(self, self._info.world_map), decision
+            StepResult.no_cells_changed(self, self._info.map), decision
         )
 
 class Fishing(Step):
@@ -123,7 +140,7 @@ class Fishing(Step):
         for a in self._info.directory.get_agents(type = entities.Aquaculture):
             a.pay_taxes()
         
-        return StepResult.no_cells_changed(self, self._info.world_map)
+        return StepResult.no_cells_changed(self, self._info.map)
         
 class Building(Step):
     def do(self):
@@ -146,7 +163,7 @@ class Building(Step):
                 blocking_radius
             ))
         return StepResult.cells_changed(
-            phase, affected_cells, self._info.world_map
+            phase, affected_cells, self._info.map
         )
         
 class Learning(Step):
@@ -154,4 +171,4 @@ class Learning(Step):
         for group in self._info.learning_mechanisms:
             self._info.learning_mechanisms[group].learn(self._info)
         
-        return StepResult.no_cells_changed(self, self._info.world_map)
+        return StepResult.no_cells_changed(self, self._info.map)

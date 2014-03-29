@@ -31,13 +31,13 @@ class Directory(object):
         self._catalogue.append((agent, type, voting))
         
     def get_voting_agents(self):
-        return [a for a, _, v in self.get_agents() if v]
+        return self.get_agents(only_voters=True)
         
-    def get_agents(self, type=None, exclude=None, only_voters=True, 
+    def get_agents(self, type=None, exclude=None, only_voters=False, 
             predicate=None):
         return [a for a, t, v in self._catalogue if 
             (type is None or t == type) and 
-            (exclude is None or a == exclude) and
+            (exclude is None or not a == exclude) and
             (not only_voters or v) and
             (predicate is None or predicate(a))
         ]
@@ -53,6 +53,9 @@ class Directory(object):
         assert len(govs) == 1, \
             "Unexpected number of governments: %d" % len(govs)        
         return govs[0]
+        
+    def get_timestamp(self):
+        return self.get_system_time()
          
     def get_system_time(self):
         return self._messages_sent

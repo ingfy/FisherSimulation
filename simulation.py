@@ -93,6 +93,11 @@ def main():
     s = Simulation()
     s.setup_config()
     map = s.initialize()
+    result1 = s.step()
+    result2 = s.step()
+    result3 = s.step()
+    result4 = s.step()
+    result5 = s.step()
     return 0
 
 if __name__ == "__main__":

@@ -25,6 +25,7 @@ class CommunicatingAgent(IdentifyingAgent):
     # directory so it can be looked up later.
     def register(self, directory, type=None, voting=False):
         self._directory = directory
+        self._message_log = []
         directory.register_communicating_agent(self, type, voting)
     
     def get_directory(self):
@@ -33,13 +34,13 @@ class CommunicatingAgent(IdentifyingAgent):
         return self._directory
         
     def send_message(self, recipient, message):
-        self.get_directory().send_message(recipient, message)
+        self.get_directory().send_message(self, recipient, message)
         self._message_log.append({
-            direction: "sent",
-            time: self.get_directory().get_system_time(),
-            sender: self.get_id(),
-            recipient: recipient,
-            contents: message
+            "direction": "sent",
+            "time": self.get_directory().get_system_time(),
+            "sender": self.get_id(),
+            "recipient": recipient,
+            "contents": message
         })        
         
     def broadcast_message(self, message):
