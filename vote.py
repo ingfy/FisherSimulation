@@ -21,3 +21,14 @@ class VotingDecisionMechanism(object):
             with planned aquaculture in the plan.
         """
         raise NotImplementedException()
+        
+    @classmethod
+    def new_population(c, agents, config, world):
+        """Add instances of this mechanism to the given agents.
+        
+        Arguments:
+            agents: A list of agents to add the mechanism to
+            config: The full configuration object
+            world:  The world instance
+        """
+        raise NotImplementedException()

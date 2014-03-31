@@ -5,6 +5,7 @@ import agent
 import entities
 import random
 import itertools
+import vote
 
 class LearningMechanism(object):
     def __init__(self, agents):
@@ -87,15 +88,24 @@ class Evolution(LearningMechanism):
             a.decision_mechanism = p
         
         
-    """
-    Linear rank selection. Based on roulette wheel. Rank all elements by
-    fitness value. Assign 1 ``lottery ticket'' to the lowest ranking member,
-    2 to the second and so on up to N tickets for the best member. Randomly
-    select based on the weighed probabilities described by the lottery 
-    tickets.
-    """
+    
     @staticmethod
     def rank_selection(self, sorted_phenotypes, num):
+        """Linear rank selection.
+        Based on roulette wheel. Rank all elements by
+        fitness value. Assign 1 ``lottery ticket'' to the lowest ranking member,
+        2 to the second and so on up to N tickets for the best member. Randomly
+        select based on the weighed probabilities described by the lottery 
+        tickets.
+        
+        Arguments:
+            sorted_phenotypes:  TODO
+            num:                TODO
+            
+        Returns:
+            TODO
+        """
+        
         wheel = {}
         sum = 0
         total = 0
@@ -147,7 +157,7 @@ class Phenotype(object):
     
     @classmethod
     def from_genotype(c, genotype):
-        return c(genotype)
+        return c(genotype)        
         
     def fitness(self):
         raise NotImplementedException()
@@ -194,8 +204,9 @@ class DecisionMechanism(object):
     def get_output_values(self):
         raise NotImplementedException()
             
-
-class FishermanNN(Phenotype, DecisionMechanism):
+# Concrete decision making
+            
+class FishermanNN(vote.VotingDecisionMechanism, Phenotype):
     inputs = [
             "distance", 
             "home conditions", 
@@ -222,6 +233,8 @@ class FishermanNN(Phenotype, DecisionMechanism):
             FishermanNN.inputs, FishermanNN.outputs, FishermanNN.hiddens, 
             self.edges
         )
+        
+    def decide_votes(self, agent, coastal_plan):
         
     def set_input_values(self, inputs):
         self.network.set_input_values(inputs)
