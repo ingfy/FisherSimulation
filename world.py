@@ -33,6 +33,9 @@ class Map(object):
         for s in (good + bad)[:num]:
             s.populate(factory.fisherman(s))
             
+    def get_cell_distance(self, a, b):
+        self._structure.get_cell_distance(a, b)
+            
     def build_aquaculture(self, agent, cell, blocking_radius):
         radius = self.get_radius_from(cell, blocking_radius)
         for b in radius:
@@ -120,19 +123,21 @@ class AbstractStructure(object):
             raise Exception("Undefined neighborhood type")
             
     def get_position(self, fun):
-        for (x, y) in self._get_coordinates_list():
+        for (x, y) in self.get_coordinates_list():
             if fun(x, y):
                 return (x, y)
         return None
             
     def get_cell_position(self, cell):
-        return self.get_position(lambda (x, y): cell is self._slots[x][y])
+        return self.get_position(lambda x, y: cell is self._slots[x][y])
         
     def get_occupant_position(self, occupant):
-        return self.get_position(lambda (x, y): occupant is self._slots[x][y].get_occupant())
+        return self.get_position(
+            lambda x, y: occupant is self._slots[x][y].get_occupant()
+        )
         
     def get_distance(self, (a_x, a_y), (b_x, b_y)):
-        cell_x, cell_y = cell_size
+        cell_x, cell_y = self._cell_size
         return math.sqrt(
             ((b_x - a_x) * cell_x) ** 2 + 
             ((b_y - a_y) * cell_y) ** 2

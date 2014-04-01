@@ -49,11 +49,11 @@ class CommunicatingAgent(IdentifyingAgent):
         
     def receive_message(self, sender, message):
         self._message_log.append({
-            direction: "received",
-            time: self.get_directory().get_system_time(),
-            sender: sender,
-            recipient: self.get_id(),
-            contents: message
+            "direction": "received",
+            "time": self.get_directory().get_system_time(),
+            "sender": sender,
+            "recipient": self.get_id(),
+            "contents": message
         })
         message.reaction(self)       
         

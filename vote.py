@@ -9,7 +9,7 @@ class Vote(object):
 class VotingDecisionMechanism(object):
     """Interface for voting decisions."""
     
-    def decide_votes(self, agent, coastal_plan):
+    def decide_votes(self, agent, coastal_plan, world_map):
         """Decide whether to complain or not for each vote.
         
         Arguments:
@@ -24,11 +24,15 @@ class VotingDecisionMechanism(object):
         
     @classmethod
     def new_population(c, agents, config, world):
-        """Add instances of this mechanism to the given agents.
+        """Add instances of this mechanism to the given agents.        
+        
+        Agents have a method:
+            add_voting_mechanism(mechanism)
         
         Arguments:
             agents: A list of agents to add the mechanism to
-            config: The full configuration object
+            config: The configuration object for the given agent,
+                    for example cfg['fishermen'] if agents are fishermen.
             world:  The world instance
         """
         raise NotImplementedException()

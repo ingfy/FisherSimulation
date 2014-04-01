@@ -50,11 +50,11 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
     def get_capital(self):
         return self._capital        
         
-    def plan_notification(self, message):
-        self.plan_message = message
+    def plan_hearing_notification(self, message):
+        self._plan_message = message
         
-    def hearing(self):        
-        votes = self.decide_votes(hearing.plan)
+    def hearing(self, world_map):        
+        votes = self.decide_votes(self._plan_message.plan, world_map)
         for vote in votes:
             self.send_message(
                 self.get_directory().get_government(),
@@ -65,6 +65,9 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
                     vote.value
                 )
             )
+            
+    def decide_votes(self, plan):
+        raise NotImplementedException()
         
     def round_reset(self):
         self._capital = 0
@@ -147,13 +150,12 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
     def distribute_plan(self):
         # Send a message to all interested parties
         for a in self.get_directory().get_agents(only_voters=True):
-            for cell in self._plan.aquaculture_sites():
-                self.send_message(a, messages.TargetArea(
-                    messages.MetaInfo(
-                        self, a, self.get_directory().get_timestamp()
-                    ),
-                    cell
-                ))
+            self.send_message(a, messages.PlanHearing(
+                messages.MetaInfo(
+                    self, a, self.get_directory().get_timestamp()
+                ),
+                self._plan
+            ))
 
 class ComplaintApproveMoreThanOne(object):
     def set_input_values(self, values):
@@ -252,7 +254,7 @@ class Government(CommunicatingAgent, PrioritizingAgent):
 #                                           spot from the map            
 
 class Fisherman(ProducedAgent):
-    def __init__(self, directory, priorities, home_cell, decision_mechanism=None):
+    def __init__(self, directory, priorities, home_cell):
         ProducedAgent.__init__(self, directory, priorities)
         self._state = 0
         self._slot_knowledge = {
@@ -260,9 +262,16 @@ class Fisherman(ProducedAgent):
         }
         self._home = home_cell
         self._fishing_efficiency = 1.0
-        self.decision_mechanism = decision_mechanism or ga.FishermanNN(
-            ga.FishermanNNGenotype.random()
-        )
+        self.decision_mechanism = None
+        
+    def get_knowledge(self):
+        return self._slot_knowledge
+        
+    def add_voting_mechanism(self, mechanism):
+        self.decision_mechanism = mechanism
+        
+    def get_home(self):
+        return self._home
         
     def work(self):
         # find best slot
@@ -281,23 +290,8 @@ class Fisherman(ProducedAgent):
         if not cell in self._slot_knowledge:
             self._slot_knowledge[cell] = None
         
-    def decide_votes(self, plan):
-        # complaint decision
-        # returns vote.BUILD or vote.DONT_BUILD
-        self.decision_mechanism.set_input_values({
-            "distance":             world_map.get_structure()
-                                        .get_cell_distance(self._home, 
-                                            target_message.cell),
-            "home conditions":      self._home.get_fish_quantity(),
-            "targeted conditions":  target_message.cell.get_fish_quantity() if 
-                                        target_message.cell in 
-                                            self._slot_knowledge
-                                        else 0.0
-        })
-        self.decision_mechanism.process()
-        return vote.DISAPPROVE if \
-            self.decision_mechanism.get_output_values()["vote"] > 0.5 \
-            else vote.APPROVE
+    def decide_votes(self, plan, world_map):
+        return self.decision_mechanism.decide_votes(self, plan, world_map)    
 
 class Aquaculture(ProducedAgent):
     def __init__(self, directory, priorities, home, decision_mechanism=None):

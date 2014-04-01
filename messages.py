@@ -43,11 +43,11 @@ class PlanHearing(Message):
     def reaction(self, recipient):
         recipient.plan_hearing_notification(self)
         
-    def get_str_summary(self):
-        return "Plan distributed with: \n\t" + ", and \n\t".join(
+    def get_str_summary(self, world_map):
+        return "Plan distributed with: \n\t" + ", and \n\t".join([
             "%d aquaculture sites" % len(self.plan.aquaculture_sites()),
             "%d reserved zones" % len(self.plan.reserved_zones())
-        )
+        ])
 
 class VoteResponse(Reply):
     def __init__(self, metainfo, plan_hearing, cell, vote):
@@ -71,7 +71,7 @@ class VoteResponse(Reply):
     def reaction(self, recipient):
         recipient.vote(self)
         
-    def get_str_summary(self, world_map, str): 
+    def get_str_summary(self, world_map): 
         return  "Vote approve for cell : (%d, %d)" if \
             self.vote == vote.APPROVE else \
             "Vote COMPLAIN for cell: (%d, %d)" % \
@@ -87,7 +87,7 @@ class VoteResponseInform(Reply):
     def reaction(self, recipient):
         recipient.vote_response_inform_notification(self)
         
-    def get_str_summary(self):
+    def get_str_summary(self, world_map):
         return "Agent %s voted %s." % (
             self.vote_response.metainfo.sender.get_id(),
             "APPROVE" if self.vote_response.vote == vote.APPROVE \

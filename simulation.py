@@ -58,13 +58,20 @@ class Simulation(object):
             agent_factory, 
             self._cfg['fisherman']['num']
         )
+        fishermen = dir.get_agents(type=entities.Fisherman)
+        # Add voting mechanism
+        self._cfg['fisherman']['voting mechanism class'].new_population(
+            fishermen,
+            self._cfg['fisherman'],
+            map
+        )
         aquaculture_spawner = entities.AquacultureSpawner()
         
         # Learning mechanisms
         ## Fishermen
         fisherman_learning = ga.Evolution(
             ga.FishermanNNGenotype,
-            ga.FishermanNN,
+            ga.FishermanVotingNN,
             dir.get_agents(type = entities.Fisherman),
             ga.EvolutionConfig.from_dict(self._cfg['fisherman']['evolution'])
         )
@@ -87,7 +94,9 @@ class Simulation(object):
     
     def step(self):
         result = self._round.next()
-        return do.PhaseReport.from_step_result(result)
+        report = do.PhaseReport.from_step_result(result)
+        print '\n'.join([str(m) for m in report.messages])
+        return report
     
 def main():
     s = Simulation()

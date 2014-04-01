@@ -110,14 +110,14 @@ class CoastalPlanning(Step):
         municipality.coastal_planning(
             self._info.map,
             self._info.directory.get_government().get_approved_complaints()
-        )        
+        )
         return StepResult.no_cells_changed(self, self._info.map)
     
 class Hearing(Step):
     def do(self):
         self._info.directory.get_government().new_vote_round()
         for agent in self._info.directory.get_voting_agents():
-            agent.hearing()
+            agent.hearing(self._info.map)
         return StepResult.no_cells_changed(self, self._info.map)
         
 class GovernmentDecision(DecisionStep):

@@ -24,7 +24,8 @@
             "selection mechanism":           "rank selection",
             "crossover rate":                0.005,
             "mutation rate":                 0.005
-        }
+        },
+        "voting mechanism class":            "ga.FishermanVotingNN"
     },
     "aquaculture": {
         "num": 0,
@@ -32,7 +33,8 @@
             "OwnProfits":                    5.0,
             "SalmonPrice":                   2.0,
             "AquacultureIndustryExisting":   1.0
-        }
+        },
+        "voting mechanism class":           "ga.FishermanVotingNN"
     },
     "civilian": {
         "num": 100,
@@ -41,7 +43,8 @@
             "FishingIndustryExisting":       3.0,
             "AquacultureIndustryExisting":   3.0,
             "NonintrusiveAquaculture":       1.0
-        }
+        },
+        "voting mechanism class":           "ga.FishermanVotingNN"
     },
     "tourist": {
         "num": 30,
@@ -49,9 +52,16 @@
             "CommunityWealth":               1.0,
             "FishingIndustryExisting":       2.0,
             "NonintrusiveAquaculture":       2.0  
-        }
+        },
+        "voting mechanism class":           "ga.FishermanVotingNN"
     },
     "government": {
+        "num": 1,
+        "priorities": {
+            "PopulationHappiness":           1.0     
+        }
+    },
+    "municipality": {
         "num": 1,
         "priorities": {
             "PopulationHappiness":           1.0     

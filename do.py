@@ -132,11 +132,19 @@ class Message(object):
         self.contents = contents
         self.timestamp = timestamp
         
+    def __str__(self):
+        return "Message:\n\t" + '\n\t'.join([
+            "Sender: %s"    % self.sender   ,
+            "Recipient: %s" % self.recipient,
+            "Time: %d"      % self.timestamp,
+            "Contents: %s"  % self.contents
+        ])
+        
     @classmethod
     def from_message(c, world_map, msg):
         return c(
-            msg.metainfo.source, 
-            msg.metainfo.target, 
+            msg.metainfo.source.get_id(), 
+            msg.metainfo.target.get_id(), 
             msg.metainfo.timestamp,
             msg.get_str_summary(world_map)
         )
@@ -159,6 +167,6 @@ class PhaseReport(object):
         return c(
             result.phase,
             [Message.from_message(result.world_map, m) 
-                for m in result.messages_sent],
+                for m in result.messages],
             Map.from_world_map(result.world_map, cells=result.cells_changed)
         )

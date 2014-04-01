@@ -11,9 +11,6 @@ class LearningMechanism(object):
     def __init__(self, agents):
         self._agents = agents
         
-    def selection_mechanism(self):
-        raise NotImplementedException()
-        
     def learn(self):
         raise NotImplementedException()
         
@@ -21,8 +18,6 @@ class EvolutionarySelectionPhenotype(object):
     def __init__(self, phenotype, fitness):
         self.phenotype = phenotype
         self.fitness = fitness
-        
-
         
 class Evolution(LearningMechanism):
     def __init__(self, phenotype, genotype, agents, config):
@@ -206,7 +201,7 @@ class DecisionMechanism(object):
             
 # Concrete decision making
             
-class FishermanNN(vote.VotingDecisionMechanism, Phenotype):
+class FishermanVotingNN(vote.VotingDecisionMechanism, Phenotype):
     inputs = [
             "distance", 
             "home conditions", 
@@ -215,7 +210,7 @@ class FishermanNN(vote.VotingDecisionMechanism, Phenotype):
     outputs = ["vote"]
 
     def __init__(self, genotype):
-        self.genotype = genotype        
+        Phenotype.__init__(self, genotype)        
         self.connections = [
             # All inputs to all hidden neurons
             (a, b) for a in self.inputs for b in self.hiddens       
@@ -230,24 +225,37 @@ class FishermanNN(vote.VotingDecisionMechanism, Phenotype):
             [float(e) / 2**FishermanNNGenotype.precision for e in 
                 self.genotype.to_number_list()])
         self.network = nn.LabeledNeuralNetwork(
-            FishermanNN.inputs, FishermanNN.outputs, FishermanNN.hiddens, 
+            FishermanVotingNN.inputs, 
+            FishermanVotingNN.outputs, 
+            FishermanVotingNN.hiddens, 
             self.edges
         )
         
-    def decide_votes(self, agent, coastal_plan):
+    def decide_votes(self, agent, coastal_plan, world_map):
+        votes = []
+        for cell in coastal_plan:
+            home = agent.get_home()
+            distance = world_map.get_cell_distance(home, cell)
+            cond = cell.get_fish_quantity() if \
+                cell in agent.get_knowledge() else 0.0
+            self.network.set_input_values({
+                "distance":             distance,
+                "home conditions":      home.get_fish_quantity(),
+                "targeted conditions":  cond
+            })
+            self.network.update()
+            complain = self.network.get_output_values()["vote"] > 0.5
+            votes.add(vote.Vote(cell, vote.DISAPPROVE if complain else APPROVE))
+        return votes
         
-    def set_input_values(self, inputs):
-        self.network.set_input_values(inputs)
+    @classmethod
+    def new_population(c, agents, config, world):
+        for a in agents:
+            a.add_voting_mechanism(c.from_genotype(FishermanNNGenotype.random()))
         
-    def process(self):
-        self.network.update()
-        
-    def get_output_values(self):
-        self.network.get_output_values()
-            
     
 class FishermanNNGenotype(Genotype):
-    phenotype_class = FishermanNN
+    phenotype_class = FishermanVotingNN
     precision = 8  # bits per 1
     weight_range = (-1, 1)
     length = (

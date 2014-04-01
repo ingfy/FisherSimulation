@@ -8,23 +8,21 @@ class Directory(object):
         self._recording = None
         
     def start_recording(self):
-        self._recording = len(self._log) - 1
+        self._recording = len(self._log)
         
     def stop_recording(self):
         assert self._recording is not None, "No recording ongoing"
         recording = self._log[self._recording:]
-        self._recording = False
+        self._recording = None
         return recording
+        
+    def in_catalogue(self, agent):
+        return agent in [a for a, _, __ in self._catalogue]
     
     def send_message(self, sender, recipient, message):
-        if recipient in self._catalogue:
-            recipient.recieve_message(sender, recipient, message)
-            self._log.append({
-                sender: sender,
-                recipient: recipient,
-                contents: message,
-                time: self.get_system_time()
-            })            
+        if self.in_catalogue(recipient):
+            recipient.receive_message(sender, message)
+            self._log.append(message)
             self._messages_sent += 1
         
     def register_communicating_agent(self, agent, type, voting=False):
