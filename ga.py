@@ -234,10 +234,10 @@ class FishermanVotingNN(vote.VotingDecisionMechanism, Phenotype):
     def decide_votes(self, agent, coastal_plan, world_map):
         votes = []
         for cell in coastal_plan:
-            home = agent.get_home()
+            home = agent.home
             distance = world_map.get_cell_distance(home, cell)
             cond = cell.get_fish_quantity() if \
-                cell in agent.get_knowledge() else 0.0
+                cell in agent.slot_knowledge else 0.0
             self.network.set_input_values({
                 "distance":             distance,
                 "home conditions":      home.get_fish_quantity(),
@@ -245,7 +245,9 @@ class FishermanVotingNN(vote.VotingDecisionMechanism, Phenotype):
             })
             self.network.update()
             complain = self.network.get_output_values()["vote"] > 0.5
-            votes.add(vote.Vote(cell, vote.DISAPPROVE if complain else APPROVE))
+            votes.append(
+                vote.Vote(cell, vote.DISAPPROVE if complain else vote.APPROVE)
+            )
         return votes
         
     @classmethod

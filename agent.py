@@ -43,8 +43,10 @@ class CommunicatingAgent(IdentifyingAgent):
             "contents": message
         })        
         
-    def broadcast_message(self, message):
-        for recipient in self.get_directory().get_agents(exclude = self):
+    def broadcast_message(self, message, exclude):
+        for recipient in \
+            [a for a in self.get_directory().get_agents(exclude = self)
+                if not a in exclude]:
             self.send_message(recipient, message)
         
     def receive_message(self, sender, message):
@@ -55,19 +57,11 @@ class CommunicatingAgent(IdentifyingAgent):
             "recipient": self.get_id(),
             "contents": message
         })
-        message.reaction(self)       
+        message.reaction(self)        
         
-    def react_to_message(self, sender, message):
-        raise NotImplementedError
-        
-class VotingAgent(CommunicatingAgent):                
+class VotingAgent(CommunicatingAgent):
     def decide_vote(self, target_message):
-        raise NotImplementedException
-        
-    def vote_response_inform_notification(self, message):
-        # Most agents do nothing in response to this
-        pass
-        
+        raise NotImplementedException        
         
     def vote_call_notification(self, message):
         self._areas_threatened.add(message.target_message.cell)

@@ -5,6 +5,7 @@ class Directory(object):
         self._catalogue = []
         self._log = []
         self._messages_sent = 0   
+        self._live_print_messages = False
         self._recording = None
         
     def start_recording(self):
@@ -21,6 +22,8 @@ class Directory(object):
     
     def send_message(self, sender, recipient, message):
         if self.in_catalogue(recipient):
+            if self._live_print_messages:
+                print message
             recipient.receive_message(sender, message)
             self._log.append(message)
             self._messages_sent += 1
@@ -29,7 +32,7 @@ class Directory(object):
         self._catalogue.append((agent, type, voting))
         
     def get_voting_agents(self):
-        return self.get_agents(only_voters=True)
+        return self.get_agents(only_voters=True)        
         
     def get_agents(self, type=None, exclude=None, only_voters=False, 
             predicate=None):

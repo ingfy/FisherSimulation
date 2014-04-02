@@ -36,22 +36,49 @@ class AgentFactory(object):
     def civilian(self):
         return self._produce(Civilian, "civilian")
         
-# Base for all the non-government, non municipality agents:
-#  Fishermen, aquaculture owners, civilians and tourists
+
 class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
+    """Base class for aquaculture, fisherman, civilian and tourist agents.
+    
+    Attributes:
+        slot_knowledge:     A dictionary mapping of cell to fishing quality 
+                            (float).
+        threats:            A list of cells that are threatened by aquaculture.
+        decision_mechanism: An object implementing the 
+                            vote.VotingDecisionMechanism interface.
+        capital:            A float representing the amount of money the agent
+                            has.
+    """
+    
     def __init__(self, directory, priorities):
         super(ProducedAgent, self).__init__()
         self.register(directory, self.__class__, voting=True)
         self.set_priorities(priorities)
-        self._capital = 0
+        self.capital = 0
+        self.slot_knowledge = {}
         self.threats = []
+        self.decision_mechanism = None
+        self._guess_when_complain = 1.0
         self._plan_message = None
+    
+    # Abstract methods
+    def work(self):
+        raise NotImplementedException()
+
+    # Concrete methods
+    def round_reset(self):
+        self.capital = 0        
         
-    def get_capital(self):
-        return self._capital        
+    def add_voting_mechanism(self, mechanism):
+        self.decision_mechanism = mechanism        
         
     def plan_hearing_notification(self, message):
         self._plan_message = message
+        
+    def vote_response_inform_notification(self, message):
+        cell = message.vote_response.cell
+        if not cell in self.slot_knowledge:
+            self.slot_knowledge[cell] = self._guess_when_complain
         
     def hearing(self, world_map):        
         votes = self.decide_votes(self._plan_message.plan, world_map)
@@ -59,23 +86,20 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
             self.send_message(
                 self.get_directory().get_government(),
                 messages.VoteResponse.reply_to(
+                    self._plan_message, 
                     self.get_directory(),              
-                    hearing.plan, 
                     vote.cell,
                     vote.value
                 )
-            )
+            )            
             
-    def decide_votes(self, plan):
-        raise NotImplementedException()
+    def decide_votes(self, plan, world_map):
+        return self.decision_mechanism.decide_votes(self, plan, world_map)    
         
-    def round_reset(self):
-        self._capital = 0
         
 # AquacultureSpawner
 
-class AquacultureSpawner(object):
-        
+class AquacultureSpawner(object):        
     def choose_cell(self, plan):
         # Maybe it should choose the best cell based on public information
         return random.choice(plan.aquaculture_sites())
@@ -90,32 +114,35 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
         super(Municipality, self).__init__()
         self.register(directory, self.__class__)
         self.set_priorities(priorities)
-        self._decision_mechanism = decision_mechanism     
+        self.decision_mechanism = decision_mechanism     
         self._taxes = {}
-        self._capital = 0.0
+        self.capital = 0.0
         self._plan = None
         
     def round_reset(self):
-        self._capital = 0.0
+        self.capital = 0.0
         self._plan = None
     
-    def collect_tax(sender, amount):
+    def collect_tax(self, sender, amount):
         self.send_message(sender, messages.Inform(
             "Tax received %02.2f from %s" % (amount, sender.get_id())
         ))
-        self._capital += amount
+        self.capital += amount
         if not sender in self._taxes:
             self._taxes[sender] = []
         self._taxes[sender].add(amount)
             
     def distribute_taxes(self):
-        benefit_agents = self._directory.get_agents(
+        benefit_agents = self.get_directory().get_agents(
             predicate=lambda a: a.is_community_member()
         )
         for a in benefit_agents:
-            amount = self._capital / len(benefit_agents)
+            amount = self.capital / len(benefit_agents)
+            self.capital -= amount
             a.give(amount)
             self.send_message(a, messages.Inform(
+                messages.MetaInfo(
+                    self, a, self.get_directory().get_timestamp()),
                 "Tax benefit %02.2f to %s" % (amount, a.get_id())
             ))
     
@@ -208,13 +235,12 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         
         # Broadcast the vote
         self.broadcast_message(
-            messages.VoteResponseInform.reply_to(message, self.get_directory())
-        )        
+            messages.VoteResponseInform.reply_to(message, self.get_directory()),
+            exclude=[self.get_directory().get_municipality()]
+        )
         
     def voting_decision(self):
-        all_voters = self.get_directory().get_all_agents(exclude = self)
-        assert set(all_voters) == set(self._votes.keys()), \
-            "Unexpected number of votes. Ensure that all votes are cast."
+        all_voters = self.get_directory().get_agents(exclude = self)
         for cell in self._complaints:
             self._decision_mechanism.set_input_values({
                 "num_votes": self._complaints[cell].num
@@ -229,18 +255,6 @@ class Government(CommunicatingAgent, PrioritizingAgent):
 
     def get_approved_complaints(self):
         return [c for c in self._complaints if c.approved]
-        
-    def call_vote(self):
-        # Outdated maybe
-        """
-        Send call for vote to all agents
-        """
-        self.broadcast_message(
-            messages.VoteCall.reply_to(
-                self._target_message, 
-                self.get_directory()
-            )
-        )
 
 ##
 ## NON-GOVERNMENT AGENTS: VOTERS, PRODUCEDAGENTS
@@ -254,85 +268,52 @@ class Government(CommunicatingAgent, PrioritizingAgent):
 #                                           spot from the map            
 
 class Fisherman(ProducedAgent):
+    """The specific implementation of a Fisherman.
+    
+    Attributes:
+        home:   A cell where the agent prioritizes to work.
+    """
     def __init__(self, directory, priorities, home_cell):
         ProducedAgent.__init__(self, directory, priorities)
-        self._state = 0
-        self._slot_knowledge = {
-            home_cell: home_cell.get_fish_quantity()
-        }
-        self._home = home_cell
+        self.home = home_cell
         self._fishing_efficiency = 1.0
-        self.decision_mechanism = None
-        
-    def get_knowledge(self):
-        return self._slot_knowledge
-        
-    def add_voting_mechanism(self, mechanism):
-        self.decision_mechanism = mechanism
-        
-    def get_home(self):
-        return self._home
+        self.slot_knowledge[home_cell] = home_cell.get_fish_quantity()                   
         
     def work(self):
         # find best slot
         best_cell = max(
-            self._slot_knowledge.iterkeys(),
-            key=lambda k: self._slot_knowledge[k] or 0
+            self.slot_knowledge.iterkeys(),
+            key=lambda k: self.slot_knowledge[k] or 0
         )
         
         output = best_cell.get_fish_quantity() * self._fishing_efficiency
         
         # run output through market
-        self._capital += output
-        
-    def vote_response_inform_notification(self, message):
-        cell = message.vote_response.vote_call.target_message.cell
-        if not cell in self._slot_knowledge:
-            self._slot_knowledge[cell] = None
-        
-    def decide_votes(self, plan, world_map):
-        return self.decision_mechanism.decide_votes(self, plan, world_map)    
+        self.capital += output
 
 class Aquaculture(ProducedAgent):
+    """Aquaculture agent implementation.
+    
+    Attributes:
+        home:   A cell where the agent is located.
+    """
+
     def __init__(self, directory, priorities, home, decision_mechanism=None):
         ProducedAgent.__init__(self, directory, priorities)
-        self._home = home
-        self.decision_mechanism = decision_mechanism
-        self._area_threatened = []
-        self._capital = 0
+        self.home = home
+        self.slot_knowledge[home] = home.get_fish_quantity()
         self._work_efficiency = 10
         self._taxation = 0.1
          
     def work(self):
-        self._capital += self._work_efficiency
+        self.capital += self._work_efficiency
         
     def build(self):
-        self._home.build_aquaculture(self)
-        
-    def get_location(self):
-        return self._home
+        self._home.build_aquaculture(self)        
         
     def pay_taxes(self):
-        government = self.directory.get_government()
-        government.collect_tax(self, self._capital * self._taxation)
-        
-    def decide_votes(self, plan):
-        # complaint decision
-        # returns vote.BUILD or vote.DONT_BUILD
-        self.decision_mechanism.set_input_values({
-            "distance":             world_map.get_structure()
-                                        .get_cell_distance(self._home, 
-                                            target_message.cell),
-            "home conditions":      self._home.get_fish_quantity(),
-            "targeted conditions":  target_message.cell.get_fish_quantity() if 
-                                        target_message.cell in 
-                                            self._slot_knowledge
-                                        else 0.0
-        })
-        self.decision_mechanism.process()
-        return vote.DONT_BUILD if \
-            self.decision_mechanism.get_output_values()["vote"] > 0.5 \
-            else vote.BUILD
+        municipality = self.get_directory().get_municipality()
+        municipality.collect_tax(self, self.capital * self._taxation)
         
     def notify_government(self):
         government = self.get_directory().get_government()
@@ -342,14 +323,17 @@ class Aquaculture(ProducedAgent):
 #
 
 class Tourist(ProducedAgent):
+    """Tourist implementation.
+    
+    Attributes:
+        priority_slots: A list of cells that the agent would prefer to not have
+                        aquaculture built on.
+    """
     def __init__(self, directory, priorities, home_cell, world_map, radius):
         ProducedAgent.__init__(self, directory, priorities)
-        self._priority_slots = Tourist.calculate_priority_slots(
+        self.priority_slots = Tourist.calculate_priority_slots(
             radius, world_map, home_cell
         )
-        
-    def get_priority_slots(self):
-        return self._priority_slots
 
     def work(self):
         pass

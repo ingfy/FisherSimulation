@@ -1,12 +1,32 @@
 import vote
 
 class MetaInfo(object):
+    """Metainfo object for messages.
+    
+    Contains the source agent, recipient and time of the message.
+    
+    Attributes:
+        source:     An Agent, the sender of the message
+        target:     An Agent, the recipient of the message
+        timestamp:  An integer representing the the message was sent
+    """
+
     def __init__(self, source, target, timestamp):
         self.source = source
         self.target = target
         self.timestamp = timestamp
         
     def reply(self, timestamp):
+        """Creates a new MetaInfo object for a reply to the message containing
+           this MetaInfo instance.
+           
+        Parameters:
+            timestamp:  The time of sending of the new message.
+            
+        Returns:
+            A new MetaInfo object where the new source is the old target, and
+            the new target is the old source.
+        """
         return MetaInfo(self.target, self.source, timestamp)
 
 class Message(object):
@@ -15,15 +35,10 @@ class Message(object):
         
     def reaction(self):
         raise NotImplementedException()
+        
+    def get_str_summary(self, world_map):
+        raise NotImplementedException()
 
-class Inform(Message):
-    def __init__(self, metainfo, str):
-        Message(self, metainfo)
-        self.str = str
-
-    def get_str_summary(self):
-        return self.str
-    
 class Reply(Message):
     @classmethod
     def reply_to(c, message, directory):
@@ -34,6 +49,20 @@ class Reply(Message):
 
     
 ### Specific messages
+
+class Inform(Message):
+    """General information message containing a string.
+    
+    Attributes:
+        str:        The information string 
+    """
+    def __init__(self, metainfo, str):
+        Message(self, metainfo)
+        self.str = str
+
+    def get_str_summary(self, world_map):
+        return self.str
+    
 
 class PlanHearing(Message):
     def __init__(self, metainfo, plan):
@@ -60,7 +89,7 @@ class VoteResponse(Reply):
         return self.cell
         
     @classmethod
-    def reply_to(c, directory, message, cell, vote):
+    def reply_to(c, message, directory, cell, vote):
         return c(
             message.metainfo.reply(directory.get_timestamp()),
             message,
@@ -72,11 +101,11 @@ class VoteResponse(Reply):
         recipient.vote(self)
         
     def get_str_summary(self, world_map): 
-        return  "Vote approve for cell : (%d, %d)" if \
+        return  ("Vote approve for cell : (%d, %d)" if \
             self.vote == vote.APPROVE else \
-            "Vote COMPLAIN for cell: (%d, %d)" % \
+            "Vote COMPLAIN for cell: (%d, %d)") % \
                 world_map.get_structure().get_cell_position(
-                    self.vote_call.target_message.cell
+                    self.cell
                 )
             
 class VoteResponseInform(Reply):
@@ -89,7 +118,7 @@ class VoteResponseInform(Reply):
         
     def get_str_summary(self, world_map):
         return "Agent %s voted %s." % (
-            self.vote_response.metainfo.sender.get_id(),
+            self.vote_response.metainfo.source.get_id(),
             "APPROVE" if self.vote_response.vote == vote.APPROVE \
                 else "COMPLAINT"
         )

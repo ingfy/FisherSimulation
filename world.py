@@ -34,7 +34,7 @@ class Map(object):
             s.populate(factory.fisherman(s))
             
     def get_cell_distance(self, a, b):
-        self._structure.get_cell_distance(a, b)
+        return self._structure.get_cell_distance(a, b)
             
     def build_aquaculture(self, agent, cell, blocking_radius):
         radius = self.get_radius_from(cell, blocking_radius)

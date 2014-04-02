@@ -59,7 +59,7 @@ class WorkingAgent(object):
     def from_object(c, object):
         return c(
             object.get_id(),
-            object.get_capital()
+            object.capital
         )
 
 class Fisherman(WorkingAgent):

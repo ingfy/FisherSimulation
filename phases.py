@@ -62,7 +62,7 @@ class StepResult(object):
 
 class Step(object):
     def __init__(self, info, next, name):
-        self._info = info
+        self.info = info
         self._next = next
         self.name = name
 
@@ -74,9 +74,9 @@ class Step(object):
 
     def action(self):
         print self
-        self._info.directory.start_recording()
+        self.info.directory.start_recording()
         result = self.do()
-        result.messages = self._info.directory.stop_recording()
+        result.messages = self.info.directory.stop_recording()
         return result
 
 class DecisionStep(Step):
@@ -89,10 +89,10 @@ class DecisionStep(Step):
         self._next_table = next_table
 
     def action(self):
-        self._info.directory.start_recording()
-        (decision, result) = self.do()
+        self.info.directory.start_recording()
+        (result, decision) = self.do()
         self.decide(decision)
-        result.messages = self._info.directory.stop_recording()
+        result.messages = self.info.directory.stop_recording()
         return result
 
     def decide(self, value):
@@ -106,69 +106,69 @@ class DecisionStep(Step):
 
 class CoastalPlanning(Step):
     def do(self):
-        municipality = self._info.directory.get_municipality()
+        municipality = self.info.directory.get_municipality()
         municipality.coastal_planning(
-            self._info.map,
-            self._info.directory.get_government().get_approved_complaints()
+            self.info.map,
+            self.info.directory.get_government().get_approved_complaints()
         )
-        return StepResult.no_cells_changed(self, self._info.map)
+        return StepResult.no_cells_changed(self, self.info.map)
     
 class Hearing(Step):
     def do(self):
-        self._info.directory.get_government().new_vote_round()
-        for agent in self._info.directory.get_voting_agents():
-            agent.hearing(self._info.map)
-        return StepResult.no_cells_changed(self, self._info.map)
+        self.info.directory.get_government().new_vote_round()
+        for agent in self.info.directory.get_voting_agents():
+            agent.hearing(self.info.map)
+        return StepResult.no_cells_changed(self, self.info.map)
         
 class GovernmentDecision(DecisionStep):
    def do(self):
-        government = self._info.directory.get_government()
+        government = self.info.directory.get_government()
         decision = government.voting_decision()
         return (
-            StepResult.no_cells_changed(self, self._info.map), decision
+            StepResult.no_cells_changed(self, self.info.map), decision
         )
 
 class Fishing(Step):
     def do(self):
         # Agents do profit activities
-        government = self._info.directory.get_government()
-        working_agents = self._info.directory.get_agents(exclude = government)
+        government = self.info.directory.get_government()
+        working_agents = self.info.directory.get_agents(exclude = government)
         #for a in working_agents: a.work()
         
         # (Local) Aquaculture companies pay some of their revenue to locals
         # through taxation
-        for a in self._info.directory.get_agents(type = entities.Aquaculture):
+        for a in self.info.directory.get_agents(type = entities.Aquaculture):
             a.pay_taxes()
         
-        return StepResult.no_cells_changed(self, self._info.map)
+        return StepResult.no_cells_changed(self, self.info.map)
         
 class Building(Step):
     def do(self):
-        government = self._info.directory.get_government()
-        municipality = self._info.directory.get_municipality()
+        government = self.info.directory.get_government()
+        municipality = self.info.directory.get_municipality()
         licenses = government.distribute_licenses()
-        spawner = self._info.aquaculture_spawner
+        spawner = self.info.aquaculture_spawner
         plan = municipality.get_plan()
         blocking_radius = 100
         affected_cells = []
-        for licence in licences:
-            cell = spawner.choose_cell(plan)
-            aquaculture_agenet = spawner.create(
-                self._info.agent_factory,
-                cell
+        for license in licenses:
+            location = spawner.choose_cell(plan)
+            agent = spawner.create(
+                self.info.agent_factory,
+                location
             )            
-            affected_cells.add(self._info.map.build_aquaculture(
+            affected_cells.append(self.info.map.build_aquaculture(
                 agent, 
                 location, 
                 blocking_radius
             ))
         return StepResult.cells_changed(
-            phase, affected_cells, self._info.map
+            self, affected_cells, self.info.map
         )
         
 class Learning(Step):
     def do(self):
-        for group in self._info.learning_mechanisms:
-            self._info.learning_mechanisms[group].learn(self._info)
+        for group in self.info.learning_mechanisms:
+            self.info.learning_mechanisms[group].learn(self.info)
         
-        return StepResult.no_cells_changed(self, self._info.map)
+        return StepResult.no_cells_changed(self, self.info.map)
