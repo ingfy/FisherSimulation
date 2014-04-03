@@ -82,16 +82,18 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
         
     def hearing(self, world_map):        
         votes = self.decide_votes(self._plan_message.plan, world_map)
+        gov = self.get_directory().get_government()
         for vote in votes:
             self.send_message(
-                self.get_directory().get_government(),
-                messages.VoteResponse.reply_to(
-                    self._plan_message, 
-                    self.get_directory(),              
+                gov,
+                messages.VoteResponse(
+                    messages.MetaInfo(self, gov),
+                    self._plan_message,
+                    self.get_directory(),
                     vote.cell,
                     vote.value
                 )
-            )            
+            )
             
     def decide_votes(self, plan, world_map):
         return self.decision_mechanism.decide_votes(self, plan, world_map)    
@@ -125,12 +127,13 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
     
     def collect_tax(self, sender, amount):
         self.send_message(sender, messages.Inform(
+            messages.MetaInfo(self, sender),
             "Tax received %02.2f from %s" % (amount, sender.get_id())
         ))
         self.capital += amount
         if not sender in self._taxes:
             self._taxes[sender] = []
-        self._taxes[sender].add(amount)
+        self._taxes[sender].append(amount)
             
     def distribute_taxes(self):
         benefit_agents = self.get_directory().get_agents(
@@ -141,8 +144,7 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
             self.capital -= amount
             a.give(amount)
             self.send_message(a, messages.Inform(
-                messages.MetaInfo(
-                    self, a, self.get_directory().get_timestamp()),
+                messages.MetaInfo(self, a),
                 "Tax benefit %02.2f to %s" % (amount, a.get_id())
             ))
     
@@ -178,9 +180,7 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
         # Send a message to all interested parties
         for a in self.get_directory().get_agents(only_voters=True):
             self.send_message(a, messages.PlanHearing(
-                messages.MetaInfo(
-                    self, a, self.get_directory().get_timestamp()
-                ),
+                messages.MetaInfo(self, a),
                 self._plan
             ))
 
@@ -234,9 +234,14 @@ class Government(CommunicatingAgent, PrioritizingAgent):
                 self._complaints[cell].add()
         
         # Broadcast the vote
+        broadcast_recipients = self.get_directory().get_agents(
+            exclude = entities.Municipality
+        )
         self.broadcast_message(
-            messages.VoteResponseInform.reply_to(message, self.get_directory()),
-            exclude=[self.get_directory().get_municipality()]
+            messages.VoteResponseInform(
+                messages.BroadcastMetaInfo(self, broadcast_recipients),
+                message
+            )
         )
         
     def voting_decision(self):

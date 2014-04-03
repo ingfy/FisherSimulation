@@ -19,14 +19,34 @@ class Directory(object):
         
     def in_catalogue(self, agent):
         return agent in [a for a, _, __ in self._catalogue]
+        
+    def process_message(self, message):
+        message.metainfo.timestmap = self.get_system_time()
+        return message
+        
+    def broadcast_message(self, message):
+        message = self.process_message(message)
+        successful_targets = []
+        for recipient in message.metainfo.targets:
+            success = self._send_message(message, log=False)
+            if success: successful_targets.append(recipient)
+        message.metainfo.targets = successful_targets
+        self._log.append(message)
+        
+    def send_message(self, message):
+        self._send_message(self.process_message(message), log=True)
     
-    def send_message(self, sender, recipient, message):
-        if self.in_catalogue(recipient):
-            if self._live_print_messages:
-                print message
-            recipient.receive_message(sender, message)
-            self._log.append(message)
-            self._messages_sent += 1
+    def _send_message(self, message, log=True):
+        if not self.in_catalogue(message.metainfo.target):
+            return False
+        if self._live_print_messages:
+            print message
+        message.metainfo.target.receive_message(
+            message.metainfo.source, message
+        )
+        self._messages_sent += 1
+        if log: self._log.append(message)
+        return True
         
     def register_communicating_agent(self, agent, type, voting=False):
         self._catalogue.append((agent, type, voting))

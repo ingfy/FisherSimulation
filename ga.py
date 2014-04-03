@@ -40,7 +40,7 @@ class Evolution(LearningMechanism):
             dir.get_agents(type = entities.Tourist)
         market = simulation_info.market
         world_map = simulation_info.map
-        aquaculture_agent = dir.get_agents(type = entities.Aquaculture)
+        aquaculture_agents = dir.get_agents(type = entities.Aquaculture)
         fitnesses = {
             agent: agent.get_priorities_satisfaction(
                 priority.Influences(

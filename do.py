@@ -119,35 +119,43 @@ class Slot(object):
         )
         
 class Message(object):
+    """Direct object representation of Message
+    Attributes:
+        sender:     String
+        recipient:  String or None
+        recipients: List of Strings or None
+        contents:   String
+        type:       String: "broadcast" or "single"
     """
-    Public members:
-        sender      String
-        recipient   String
-        contents    String
-    """
-    
-    def __init__(self, sender, recipient, timestamp, contents):
-        self.sender = sender
-        self.recipient = recipient
-        self.contents = contents
-        self.timestamp = timestamp
         
     def __str__(self):
+        recipient_line = ("Recipient: %s" % self.recipient) if \
+            self.type == "single" else \
+            ("Recipients:\n\t\t%s" % '\n\t\t'.join(self.recipients))
         return "Message:\n\t" + '\n\t'.join([
+            "Type: %s"      % self.type     ,            
             "Sender: %s"    % self.sender   ,
-            "Recipient: %s" % self.recipient,
+            recipient_line                  ,
             "Time: %d"      % self.timestamp,
             "Contents: %s"  % self.contents
         ])
         
     @classmethod
     def from_message(c, world_map, msg):
-        return c(
-            msg.metainfo.source.get_id(), 
-            msg.metainfo.target.get_id(), 
-            msg.metainfo.timestamp,
-            msg.get_str_summary(world_map)
-        )
+        assert msg.type in ["broadcast", "single"], \
+            "Unknown message type: %s" % msg.type        
+        message = c()
+        message.sender = msg.metainfo.source.get_id()
+        message.type = msg.metainfo.type        
+        if message.type == "broadcast":
+            message.recipients = [a.get_id() for a in msg.metainfo.targets]
+            message.recipient = None
+        else:
+            message.recipient = msg.metainfo.target
+            message.recipients = None
+        message.timestamp = msg.metainfo.timestmap
+        message.contents = msg.get_str_summary(world_map)
+        return message
         
 class PhaseReport(object):
     """

@@ -1,6 +1,8 @@
 import vote
 
 class MetaInfo(object):
+    type = "single"
+
     """Metainfo object for messages.
     
     Contains the source agent, recipient and time of the message.
@@ -9,9 +11,10 @@ class MetaInfo(object):
         source:     An Agent, the sender of the message
         target:     An Agent, the recipient of the message
         timestamp:  An integer representing the the message was sent
+        type:       A string indicating that the message has a single recipient.
     """
 
-    def __init__(self, source, target, timestamp):
+    def __init__(self, source, target, timestamp=None):
         self.source = source
         self.target = target
         self.timestamp = timestamp
@@ -28,13 +31,30 @@ class MetaInfo(object):
             the new target is the old source.
         """
         return MetaInfo(self.target, self.source, timestamp)
+        
+class BroadcastMetaInfo(MetaInfo):
+    type = "broadcast"
+
+    """Broadcast MetaInfo object for broadcasts.
+    
+    The difference from normal MetaInfo objects is that the target is instead
+    a list of targets.
+    
+    Attributes:
+        targets:    A list of agents that will receive the message.
+        type:       A string indicating that 
+    """
+    
+    def __init__(self, source, targets, timestamp=None):
+        MetaInfo.__init__(self, source, None, timestamp)
+        self.targets = targets
 
 class Message(object):
     def __init__(self, metainfo):
         self.metainfo = metainfo
         
-    def reaction(self):
-        raise NotImplementedException()
+    def reaction(self, recipient):
+        pass
         
     def get_str_summary(self, world_map):
         raise NotImplementedException()
@@ -57,7 +77,7 @@ class Inform(Message):
         str:        The information string 
     """
     def __init__(self, metainfo, str):
-        Message(self, metainfo)
+        Message.__init__(self, metainfo)
         self.str = str
 
     def get_str_summary(self, world_map):

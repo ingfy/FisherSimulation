@@ -34,20 +34,17 @@ class CommunicatingAgent(IdentifyingAgent):
         return self._directory
         
     def send_message(self, recipient, message):
-        self.get_directory().send_message(self, recipient, message)
+        self.get_directory().send_message(message)
         self._message_log.append({
             "direction": "sent",
             "time": self.get_directory().get_system_time(),
             "sender": self.get_id(),
-            "recipient": recipient,
+            "recipient": message.metainfo.target,
             "contents": message
         })        
         
-    def broadcast_message(self, message, exclude):
-        for recipient in \
-            [a for a in self.get_directory().get_agents(exclude = self)
-                if not a in exclude]:
-            self.send_message(recipient, message)
+    def broadcast_message(self, message):
+        self.get_directory().broadcast_message(message)
         
     def receive_message(self, sender, message):
         self._message_log.append({
@@ -98,7 +95,5 @@ class PrioritizingAgent(object):
     # Weighted average of priority values
     def get_priorities_satisfaction(self, influences):
         return sum([
-            p.calculate_value(influences) * w for 
-            p, self._priorities[p] in 
-            self._priorities]
-            )/len(self._priorities)
+            p.calculate_value(influences) * self._priorities[p] for 
+            p in self._priorities])/len(self._priorities)

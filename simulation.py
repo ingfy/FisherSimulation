@@ -108,6 +108,7 @@ def main():
     result4 = s.step()
     result5 = s.step()
     result6 = s.step()
+    result7 = s.step()
     return 0
 
 if __name__ == "__main__":
