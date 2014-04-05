@@ -20,14 +20,15 @@ class EvolutionarySelectionPhenotype(object):
         self.fitness = fitness
         
 class Evolution(LearningMechanism):
-    def __init__(self, phenotype, genotype, agents, config):
+    def __init__(self, agents, config):
         LearningMechanism.__init__(self, agents)
-        self._phenotype = phenotype
-        self._genotype = genotype
+        self._phenotype = config.phenotype
+        self._genotype = config.genotype
         self._elitism = config.elitism
         self.selection_mechanism = config.selection_mechanism
         self._crossover_rate = config.crossover_rate
         self._mutation_rate = config.mutation_rate
+        self._genome_mutation_rate = config.genome_mutation_rate
         
     def learn(self, simulation_info):
         dir = simulation_info.directory
@@ -51,8 +52,8 @@ class Evolution(LearningMechanism):
         }
         
         # sorted
-        fitnesses = [(a.decision_mechanism, f, a) for a, f in sorted(
-            fitnesses.iterkeys(), key=lambda k: fitnesses[k]
+        fitnesses = [(a.decision_mechanism, fitnesses[a], a) for a in sorted(
+                fitnesses.iterkeys(), key=lambda k: fitnesses[k]
         )] # returns an ordered list of (phenotype, fitness, agent) tuples
         
         # keep elites
@@ -64,7 +65,7 @@ class Evolution(LearningMechanism):
         ) # select n best non-elites
         
         # Mutate
-        genotypes = [p.genotype for p in selected]
+        genotypes = [p.phenotype.genotype for p in selected]
         
         ## crossover
         for (a, b) in itertools.combinations(range(len(genotypes)), 2):
@@ -72,8 +73,9 @@ class Evolution(LearningMechanism):
                 genotypes[a], genotypes[b], self._crossover_rate
             )
             
-        ## mutation
-        genotypes = [g.mutate(self._mutation_rate) for g in genotypes]
+        ## mutation        
+        for g in genotypes:
+            g.mutate(self._mutation_rate, self._genome_mutation_rate) 
           
         # Create new phenotypes
         new_phenotypes = [self._phenotype.from_genotype(g) for g in genotypes]
@@ -81,11 +83,9 @@ class Evolution(LearningMechanism):
         # Distribute new phenotypes to non-elite agents
         for (__, ___, a), p in zip(rest, new_phenotypes):
             a.decision_mechanism = p
-        
-        
     
     @staticmethod
-    def rank_selection(self, sorted_phenotypes, num):
+    def rank_selection(sorted_phenotypes, num):
         """Linear rank selection.
         Based on roulette wheel. Rank all elements by
         fitness value. Assign 1 ``lottery ticket'' to the lowest ranking member,
@@ -105,7 +105,7 @@ class Evolution(LearningMechanism):
         sum = 0
         total = 0
         for n in xrange(len(sorted_phenotypes)):
-            wheel[sorted_phenotypes[-p]] = n + sum
+            wheel[sorted_phenotypes[-n]] = n + sum
             sum += n
             total += n + sum
         selected = [None] * num
@@ -122,29 +122,21 @@ class EvolutionConfig(object):
         "rank selection": Evolution.rank_selection,
         "default": Evolution.rank_selection
     }
-    def __init__(self, elitism, selection_mechanism, crossover_rate, 
-            mutation_rate):
-        self.elitism = elitism
-        self.selection_mechanism = selection_mechanism
-        self.crossover_rate = crossover_rate
-        self.mutation_rate = mutation_rate
-        
+    
     @classmethod
     def from_dict(c, dict):
-        elitism = int(dict["elitism"])
-        selection_mechanism = EvolutionConfig.SELECTION_MECHANISMS.get(
+        obj = c()
+        obj.phenotype = dict["phenotype class"]
+        obj.genotype = dict["genotype class"]
+        obj.elitism = int(dict["elitism"])
+        obj.selection_mechanism = EvolutionConfig.SELECTION_MECHANISMS.get(
             dict["selection mechanism"], 
             EvolutionConfig.SELECTION_MECHANISMS["default"]
         )
-        crossover_rate = float(dict["crossover rate"])
-        mutation_rate = float(dict["mutation rate"])
-        return c(
-            elitism,
-            selection_mechanism,
-            crossover_rate,
-            mutation_rate
-        )
-            
+        obj.crossover_rate = float(dict["crossover rate"])
+        obj.mutation_rate = float(dict["mutation rate"])
+        obj.genome_mutation_rate = float(dict["genome mutation rate"])
+        return obj
 
 class Phenotype(object):
     def __init__(self, genotype):
@@ -166,9 +158,7 @@ class Genotype(object):
     @classmethod
     def random(c):
         return c(
-            "".join(
-                ["0" if random.random() > 0.5 else "1" for __ in xrange(c.length)]
-            )
+            ["0" if random.random() > 0.5 else "1" for __ in xrange(c.length)]
         )
         
     def mutate(self, mutation_rate, genome_mutation_rate):
@@ -186,7 +176,7 @@ class Genotype(object):
         return (
             c(first.genome[:point] + second.genome[point:]),
             c(second.genome[:point] + first.genome[point:])
-        ) if random.random() < rate else (first, second)
+        ) if random.random() < crossover_rate else (first, second)
         
 # Abstract Decision Making Mechanism class        
 class DecisionMechanism(object):
@@ -253,7 +243,9 @@ class FishermanVotingNN(vote.VotingDecisionMechanism, Phenotype):
     @classmethod
     def new_population(c, agents, config, world):
         for a in agents:
-            a.add_voting_mechanism(c.from_genotype(FishermanNNGenotype.random()))
+            a.add_voting_mechanism(
+                c.from_genotype(FishermanNNGenotype.random())
+            )
         
     
 class FishermanNNGenotype(Genotype):
@@ -270,4 +262,4 @@ class FishermanNNGenotype(Genotype):
         def sep(str, acc):
             if len(str) < self.precision: return acc
             return sep(str[self.precision:], acc + [str[:self.precision]])
-        return [int(e, 2) for e in sep(self.genome, [])]        
+        return [int(''.join(e), 2) for e in sep(self.genome, [])]        

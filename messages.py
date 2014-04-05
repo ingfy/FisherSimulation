@@ -60,6 +60,13 @@ class Message(object):
         raise NotImplementedException()
 
 class Reply(Message):
+    reply_to_type = Message
+
+    def __init__(self, metainfo, reply_to):
+        assert isinstance(reply_to, self.reply_to_type), "Unexpected type for reply_to."
+        Message.__init__(self, metainfo)
+        self.reply_to = reply_to
+
     @classmethod
     def reply_to(c, message, directory):
         return c(
@@ -99,46 +106,31 @@ class PlanHearing(Message):
         ])
 
 class VoteResponse(Reply):
-    def __init__(self, metainfo, plan_hearing, cell, vote):
-        Message.__init__(self, metainfo)
-        self.plan_hearing = plan_hearing    
-        self.cell = cell
-        self.vote = vote
-        
-    def get_cell(self):
-        return self.cell
-        
-    @classmethod
-    def reply_to(c, message, directory, cell, vote):
-        return c(
-            message.metainfo.reply(directory.get_timestamp()),
-            message,
-            cell,
-            vote
-        )
+    reply_to_type = PlanHearing
+
+    def __init__(self, metainfo, reply_to, votes):
+        Reply.__init__(self, metainfo, reply_to)
+        self.votes = votes
         
     def reaction(self, recipient):
         recipient.vote(self)
         
     def get_str_summary(self, world_map): 
-        return  ("Vote approve for cell : (%d, %d)" if \
-            self.vote == vote.APPROVE else \
-            "Vote COMPLAIN for cell: (%d, %d)") % \
-                world_map.get_structure().get_cell_position(
-                    self.cell
-                )
+        approvals = len([v for v in self.votes if v.value == vote.APPROVE])
+        complaints = len(self.votes) - approvals
+        return  "Vote response with %d complaints and %d approvals" % (complaints, approvals)
             
 class VoteResponseInform(Reply):
-    def __init__(self, metainfo, vote_response):
-        Message.__init__(self, metainfo)
-        self.vote_response = vote_response
+    reply_to_type = VoteResponse
+
+    def __init__(self, metainfo, reply_to):
+        Reply.__init__(self, metainfo, reply_to)
         
     def reaction(self, recipient):
         recipient.vote_response_inform_notification(self)
         
     def get_str_summary(self, world_map):
-        return "Agent %s voted %s." % (
-            self.vote_response.metainfo.source.get_id(),
-            "APPROVE" if self.vote_response.vote == vote.APPROVE \
-                else "COMPLAINT"
+        return "Agent %s voted: %s." % (
+            self.reply_to.metainfo.source.get_id(),
+            self.reply_to.get_str_summary(world_map)
         )

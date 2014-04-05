@@ -1,8 +1,16 @@
-APPROVE = 0
-DISAPPROVE = 1
+APPROVE = object()
+DISAPPROVE = object()
 
 class Vote(object):
+    """Object containing vote and the cell it regards.
+    
+    Attributes:
+        value:  Either APPROVE or DISAPPROVE
+        cell:   A world.Slot instance
+    """
+    
     def __init__(self, cell, value):
+        assert value in [APPROVE, DISAPPROVE], "Invalid vote value."
         self.value = value
         self.cell = cell
 

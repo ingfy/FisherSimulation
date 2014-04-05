@@ -76,24 +76,22 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
         self._plan_message = message
         
     def vote_response_inform_notification(self, message):
-        cell = message.vote_response.cell
-        if not cell in self.slot_knowledge:
-            self.slot_knowledge[cell] = self._guess_when_complain
+        for v in message.reply_to.votes:
+            cell = v.cell
+            if not cell in self.slot_knowledge:
+                self.slot_knowledge[cell] = self._guess_when_complain
         
     def hearing(self, world_map):        
         votes = self.decide_votes(self._plan_message.plan, world_map)
         gov = self.get_directory().get_government()
-        for vote in votes:
-            self.send_message(
-                gov,
-                messages.VoteResponse(
-                    messages.MetaInfo(self, gov),
-                    self._plan_message,
-                    self.get_directory(),
-                    vote.cell,
-                    vote.value
-                )
+        self.send_message(
+            gov,
+            messages.VoteResponse(
+                messages.MetaInfo(self, gov),
+                self._plan_message,
+                votes
             )
+        )
             
     def decide_votes(self, plan, world_map):
         return self.decision_mechanism.decide_votes(self, plan, world_map)    
@@ -159,11 +157,11 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
             # TODO:
             #  Maybe divide into different kinds of areas first,
             #  maybe only 50% of the map for aquaculture.
-            
+            print "new plan!"
             self._plan = plan.CoastalPlan({
                 c: plan.AQUACULTURE_SITE
                     for c in world_map.get_all_cells()
-                    if not c.is_blocked()
+                        if not c.is_blocked()
             })
         
         # Convert all cells that have approved complaints to
@@ -178,11 +176,13 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
         
     def distribute_plan(self):
         # Send a message to all interested parties
-        for a in self.get_directory().get_agents(only_voters=True):
-            self.send_message(a, messages.PlanHearing(
-                messages.MetaInfo(self, a),
+        recipients = self.get_directory().get_agents(only_voters=True)
+        self.broadcast_message(
+            messages.PlanHearing(
+                messages.BroadcastMetaInfo(self, recipients),
                 self._plan
-            ))
+            )
+        )
 
 class ComplaintApproveMoreThanOne(object):
     def set_input_values(self, values):
@@ -225,17 +225,17 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         self.new_vote_round()
         
     def vote(self, message):
-        cell = message.get_cell()
-        if message.vote == vote.DISAPPROVE:
-            complaint = plan.Complaint(cell)
-            if not cell in self._complaints:
-                self._complaints[cell] = complaint
-            else:
-                self._complaints[cell].add()
-        
-        # Broadcast the vote
+        for v in message.votes:
+            cell = v.cell
+            if v.value == vote.DISAPPROVE:
+                if not cell in self._complaints:
+                    self._complaints[cell] = plan.Complaint(cell)
+                else:
+                    self._complaints[cell].add()
+            
+        # Broadcast the votes
         broadcast_recipients = self.get_directory().get_agents(
-            exclude = entities.Municipality
+            only_voters=True
         )
         self.broadcast_message(
             messages.VoteResponseInform(

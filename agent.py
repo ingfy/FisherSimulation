@@ -94,6 +94,11 @@ class PrioritizingAgent(object):
     
     # Weighted average of priority values
     def get_priorities_satisfaction(self, influences):
-        return sum([
-            p.calculate_value(influences) * self._priorities[p] for 
-            p in self._priorities])/len(self._priorities)
+        s = 0.0
+        t = 0.0
+        for p in self._priorities:
+            w = self._priorities[p]
+            value = p.calculate_value(influences)
+            s += value * w
+            t += w
+        return s / t

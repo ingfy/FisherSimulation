@@ -100,13 +100,20 @@ class Slot(object):
         aquaculture     Boolean
         fisherman       Boolean
         land            Boolean
+        blocked         Boolean
     """
     
-    def __init__(self, spawning, aquaculture, fisherman, land):
+    def __init__(self, spawning, aquaculture, fisherman, land, blocked):
         self.spawning = spawning
         self.aquaculture = aquaculture
         self.fisherman = fisherman
         self.land = land
+        self.blocked = blocked
+        
+    def __str__(self):
+        return "CELL[Land:%s, Spawn:%s, Aquaculture:%s, Fisherman:%s]" % \
+            ("YES" if e else "NO" for e in (self.spawning, self.aquaculture, 
+                                            self.fisherman, self.land)      )
         
     @classmethod
     def from_world_slot(c, world_slot):
@@ -115,7 +122,8 @@ class Slot(object):
             world_slot.fish_spawning(),
             occupant is not None and occupant.__class__ is entities.Aquaculture,
             occupant is not None and occupant.__class__ is entities.Fisherman,
-            world_slot.is_land()
+            world_slot.is_land(),
+            world_slot.is_blocked()
         )
         
 class Message(object):
@@ -142,8 +150,8 @@ class Message(object):
         
     @classmethod
     def from_message(c, world_map, msg):
-        assert msg.type in ["broadcast", "single"], \
-            "Unknown message type: %s" % msg.type        
+        assert msg.metainfo.type in ["broadcast", "single"], \
+            "Unknown message type: %s" % msg.metainfo.type        
         message = c()
         message.sender = msg.metainfo.source.get_id()
         message.type = msg.metainfo.type        
@@ -163,12 +171,14 @@ class PhaseReport(object):
         phase       String
         messages    List<String>
         map         Map
+        new_round:  Boolean
     """
     
-    def __init__(self, phase, messages, map):
+    def __init__(self, phase, messages, map, new_round):
         self.phase = phase.name
         self.messages = messages
         self.map = map
+        self.new_round = new_round
         
     @classmethod
     def from_step_result(c, result):
@@ -176,5 +186,6 @@ class PhaseReport(object):
             result.phase,
             [Message.from_message(result.world_map, m) 
                 for m in result.messages],
-            Map.from_world_map(result.world_map, cells=result.cells_changed)
+            Map.from_world_map(result.world_map, cells=result.cells_changed),
+            result.phase == "COASTPLAN"
         )

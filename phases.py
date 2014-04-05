@@ -37,8 +37,11 @@ class Round(object):
         self._current_step = self._current_step.next()
         if self._current_step is None:
             self._round_counter += 1
-            self._current_step = self._start        
-        return result
+            self._current_step = self._start
+        return result        
+        
+    def current(self):
+        return self._current_step.name
        
     def rounds(self):
         return self._round_counter
@@ -106,6 +109,10 @@ class DecisionStep(Step):
 
 class CoastalPlanning(Step):
     def do(self):
+        # first round reset
+        for a in self.info.directory.get_agents():
+            a.round_reset()
+    
         municipality = self.info.directory.get_municipality()
         municipality.coastal_planning(
             self.info.map,

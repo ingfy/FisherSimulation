@@ -19,13 +19,34 @@
             "NaturalFishHealth":             2.0,
             "AquacultureIndustryExisting":   1.0
         },
-        "evolution": {
+        "learning mechanism": {
+            "class": {
+                "type":     "class",
+                "class":    "ga.Evolution"
+            },
+            "config class": {
+                "type":     "class",
+                "class":    "ga.EvolutionConfig"
+            },
+            "phenotype class": {
+                "type":     "class",
+                "class":    "ga.FishermanVotingNN"
+            },
+            "genotype class": {
+                "type":     "class",
+                "class":    "ga.FishermanNNGenotype"
+            },
             "elitism":                       3,
             "selection mechanism":           "rank selection",
             "crossover rate":                0.005,
-            "mutation rate":                 0.005
+            "mutation rate":                 0.005,
+            "genome mutation rate":          0.00005
+            
         },
-        "voting mechanism class":            "ga.FishermanVotingNN"
+        "voting mechanism class": {
+            "type": "class",
+            "class": "ga.FishermanVotingNN"
+        }
     },
     "aquaculture": {
         "num": 0,

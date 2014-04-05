@@ -28,7 +28,9 @@ class Directory(object):
         message = self.process_message(message)
         successful_targets = []
         for recipient in message.metainfo.targets:
-            success = self._send_message(message, log=False)
+            success = self._send_message(
+                message, target_override=recipient, log=False
+            )
             if success: successful_targets.append(recipient)
         message.metainfo.targets = successful_targets
         self._log.append(message)
@@ -36,12 +38,13 @@ class Directory(object):
     def send_message(self, message):
         self._send_message(self.process_message(message), log=True)
     
-    def _send_message(self, message, log=True):
-        if not self.in_catalogue(message.metainfo.target):
+    def _send_message(self, message, target_override=None, log=True):
+        target = target_override or message.metainfo.target
+        if not self.in_catalogue(target):
             return False
         if self._live_print_messages:
             print message
-        message.metainfo.target.receive_message(
+        target.receive_message(
             message.metainfo.source, message
         )
         self._messages_sent += 1
