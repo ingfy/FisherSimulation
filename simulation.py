@@ -68,7 +68,7 @@ class Simulation(object):
         fishermen = dir.get_agents(type=entities.Fisherman)
         # Add voting mechanism
         for a in fishermen:
-            self._cfg['fisherman']['voting mechanism class'].new_population(
+            self._cfg['fisherman']['voting mechanism class'].new(
                 a,
                 self._cfg['fisherman'],
                 map
@@ -99,7 +99,7 @@ class Simulation(object):
                 learning = self._cfg[name]["learning mechanism"]["class"]
                 config = self._cfg[name]["learning mechanism"]["config class"]
                 learning_mechanisms[entity] = learning(
-                    dir.get_agents(type = entiy),
+                    dir.get_agents(type = entity),
                     config.from_dict(self._cfg[name]["learning mechanism"])
                 )
         

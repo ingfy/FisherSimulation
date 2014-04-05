@@ -5,6 +5,7 @@
     Therefore they contain no logic except for static factory methods.
 """
 
+import util
 import messages
 import entities
 
@@ -87,11 +88,13 @@ class Map(object):
     @classmethod
     def from_world_map(c, world_map, cells=None):
         s = world_map.get_structure()
-        return c([
-            [Slot.from_world_slot(c) if cells is None or c in cells else None
-                for c in r] 
+        if not cells is None: print len(cells)
+        g = [
+            [Slot.from_world_slot(d) if cells is None or d in cells else None
+                for d in r] ###TODO::FIIIX
             for r in s.get_grid()]
-        )
+        print g
+        return c(g)
         
 class Slot(object):
     """ 
@@ -139,7 +142,8 @@ class Message(object):
     def __str__(self):
         recipient_line = ("Recipient: %s" % self.recipient) if \
             self.type == "single" else \
-            ("Recipients:\n\t\t%s" % '\n\t\t'.join(self.recipients))
+            ("Recipients:%s" % util.smart_line_sep(
+                self.recipients, ", ", 100, "\n" + " "*12))
         return "Message:\n\t" + '\n\t'.join([
             "Type: %s"      % self.type     ,            
             "Sender: %s"    % self.sender   ,

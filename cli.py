@@ -26,30 +26,29 @@ class CommandLineInterface(object):
         rounds = steps = 0
         reports = []
         while True:
-            current_phase = self.simulation.get_current_phase()
-            print "Current phase: %s" % current_phase
+            current_phase = self.simulation.get_current_phase()            
             if rounds == 0 and steps == 0:
                 for r in reports:
                     print_phase_report(r)
+                print map_to_string(self.simulation_info.map)
                 reports = []
+                print "Current phase: %s" % current_phase
                 rounds, steps = get_numer_of_iterations()
             if rounds == 0:
                 steps -= 1
             else:
                 if new_round:
                     rounds -= 1
-                        
+            
             result = self.simulation.step()
+            reports.append(result)
             new_round = result.new_round
             
             # modify map
             self.simulation_info.map.grid = update_map(
                 self.simulation_info.map.grid, result.map.grid
             )
-                
-            print rounds, steps
-            
-        
+
     def exit(self):
         print "Simulation finished."
         print map_to_string(self.simulation_info.map)

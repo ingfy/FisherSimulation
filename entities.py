@@ -111,7 +111,7 @@ class AquacultureSpawner(object):
         
     def create(self, factory, cell):
         agent = factory.aquaculture(cell)
-        self.voting_mechanism_class.new(agent, config, map)
+        self.voting_mechanism_class.new(agent, self.config, self.map)
         return agent
 
         
@@ -164,7 +164,6 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
             # TODO:
             #  Maybe divide into different kinds of areas first,
             #  maybe only 50% of the map for aquaculture.
-            print "new plan!"
             self._plan = plan.CoastalPlan({
                 c: plan.AQUACULTURE_SITE
                     for c in world_map.get_all_cells()
