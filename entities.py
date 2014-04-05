@@ -99,13 +99,20 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
         
 # AquacultureSpawner
 
-class AquacultureSpawner(object):        
+class AquacultureSpawner(object):
+    def __init__(self, voting_mechanism_class, config, map):
+        self.map = map
+        self.voting_mechanism_class = voting_mechanism_class
+        self.config = config
+    
     def choose_cell(self, plan):
         # Maybe it should choose the best cell based on public information
         return random.choice(plan.aquaculture_sites())
         
     def create(self, factory, cell):
-        return factory.aquaculture(cell)
+        agent = factory.aquaculture(cell)
+        self.voting_mechanism_class.new(agent, config, map)
+        return agent
 
         
 # Handles the planning

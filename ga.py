@@ -241,11 +241,10 @@ class FishermanVotingNN(vote.VotingDecisionMechanism, Phenotype):
         return votes
         
     @classmethod
-    def new_population(c, agents, config, world):
-        for a in agents:
-            a.add_voting_mechanism(
-                c.from_genotype(FishermanNNGenotype.random())
-            )
+    def new(c, agent, config, world):
+        agent.add_voting_mechanism(
+            c.from_genotype(FishermanNNGenotype.random())
+        )
         
     
 class FishermanNNGenotype(Genotype):

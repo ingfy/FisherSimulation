@@ -31,8 +31,8 @@ class VotingDecisionMechanism(object):
         raise NotImplementedException()
         
     @classmethod
-    def new_population(c, agents, config, world):
-        """Add instances of this mechanism to the given agents.        
+    def new(c, agent, config, world):
+        """Add an instance of this mechanism to the given agent.        
         
         Agents have a method:
             add_voting_mechanism(mechanism)

@@ -76,7 +76,6 @@ class Step(object):
         return self._next
 
     def action(self):
-        print self
         self.info.directory.start_recording()
         result = self.do()
         result.messages = self.info.directory.stop_recording()

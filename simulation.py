@@ -67,25 +67,53 @@ class Simulation(object):
         )
         fishermen = dir.get_agents(type=entities.Fisherman)
         # Add voting mechanism
-        self._cfg['fisherman']['voting mechanism class'].new_population(
-            fishermen,
-            self._cfg['fisherman'],
+        for a in fishermen:
+            self._cfg['fisherman']['voting mechanism class'].new_population(
+                a,
+                self._cfg['fisherman'],
+                map
+            )
+        
+        aquaculture_spawner = entities.AquacultureSpawner(
+            self._cfg['aquaculture']['voting mechanism class'],
+            self._cfg['aquaculture'],
             map
         )
-        aquaculture_spawner = entities.AquacultureSpawner()
         
         # Learning mechanisms
+        
+        agent_types_config_name = {
+            entities.Fisherman: "fisherman",
+            entities.Aquaculture: "aquaculture",
+            entities.Civilian: "civilian",
+            entities.Tourist: "tourist",
+            entities.Government: "government",
+            entities.Municipality: "municipality"            
+        }
+        
+        learning_mechanisms = {}
+        
+        for entity in agent_types_config_name:
+            name = agent_types_config_name[entity]
+            if "learning mechanism" in self._cfg[name]:
+                learning = self._cfg[name]["learning mechanism"]["class"]
+                config = self._cfg[name]["learning mechanism"]["config class"]
+                learning_mechanisms[entity] = learning(
+                    dir.get_agents(type = entiy),
+                    config.from_dict(self._cfg[name]["learning mechanism"])
+                )
+        
         ## Fishermen
-        fishermen_learning_class = \
-            self._cfg['fisherman']['learning mechanism']['class']
-        fishermen_learning_config_class = \
-            self._cfg['fisherman']['learning mechanism']['config class']
-        fisherman_learning = fishermen_learning_class(
-            dir.get_agents(type = entities.Fisherman),
-            fishermen_learning_config_class.from_dict(
-                self._cfg['fisherman']['learning mechanism']
-            )
-        )
+        # fishermen_learning_class = \
+            # self._cfg['fisherman']['learning mechanism']['class']
+        # fishermen_learning_config_class = \
+            # self._cfg['fisherman']['learning mechanism']['config class']
+        # fisherman_learning = fishermen_learning_class(
+            # dir.get_agents(type = entities.Fisherman),
+            # fishermen_learning_config_class.from_dict(
+                # self._cfg['fisherman']['learning mechanism']
+            # )
+        # )
         
         info = SimulationInfo(
             map, 
@@ -94,9 +122,7 @@ class Simulation(object):
             market.Market(),
             agent_factory, 
             aquaculture_spawner,
-            {
-                entities.Fisherman: fisherman_learning
-            }
+            learning_mechanisms
         )
                 
         self._round = phases.Round(info)

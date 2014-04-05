@@ -33,19 +33,18 @@ class CommandLineInterface(object):
                     print_phase_report(r)
                 reports = []
                 rounds, steps = get_numer_of_iterations()
+            if rounds == 0:
+                steps -= 1
             else:
-                if rounds == 0:
-                    steps -= 1
-                else:
-                    if new_round:
-                        rounds -= 1
+                if new_round:
+                    rounds -= 1
                         
             result = self.simulation.step()
             new_round = result.new_round
             
             # modify map
-            self.simulation_info.map = update_map(
-                self.simulation_info.map, result.map
+            self.simulation_info.map.grid = update_map(
+                self.simulation_info.map.grid, result.map.grid
             )
                 
             print rounds, steps
@@ -76,15 +75,12 @@ def map_to_string(map, include_symbols=True):
         str += ", symbols:\n" + \
             "\t" + ", ".join(map_symbol_explanations) + ".\n" + \
             "\tModifiers: " + ", ".join(map_modifier_explanations) + "."
-    lines = []
     r_num = 0
-    c_num = 0
-    for c in map.grid:
-        print "%02d" % c_num
-        c_num += 1
-    for c in map.grid:
-        line = []
-        for slot in c:
+    lines = ["   " + "".join("%02d " % n for n in xrange(len(map.grid)))]
+    for r in map.grid:
+        line = ["%02d" % r_num]
+        r_num += 1
+        for slot in r:
             cell = []
             if slot.land:
                 cell.append("L")
@@ -94,6 +90,8 @@ def map_to_string(map, include_symbols=True):
                 cell.append("B")
             elif slot.fisherman:
                 cell.append("F")
+            else:
+                cell.append(" ")
             modifier = "*" if slot.spawning else " "
             cell.append(modifier)
             line.append("".join(cell))
@@ -120,6 +118,8 @@ def get_numer_of_iterations():
             "0.1"
         ).split("."))
         return rounds, steps
+    except KeyboardInterrupt:
+        raise
     except:
         print "Invalid format."
         get_numer_of_iterations()

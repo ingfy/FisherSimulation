@@ -55,7 +55,10 @@
             "SalmonPrice":                   2.0,
             "AquacultureIndustryExisting":   1.0
         },
-        "voting mechanism class":           "ga.FishermanVotingNN"
+        "voting mechanism class": {
+            "type":     "class",
+            "class":    "ga.FishermanVotingNN"
+        }
     },
     "civilian": {
         "num": 100,
