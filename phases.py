@@ -47,19 +47,20 @@ class Round(object):
         return self._round_counter
         
 class StepResult(object):
-    def __init__(self, phase, messages_sent, cells_changed, world_map):
+    def __init__(self, phase, messages_sent, cells_changed, world_map, data):
         self.phase = phase
         self.messages_sent = messages_sent
         self.cells_changed = cells_changed
         self.world_map = world_map
+        self.data = data
         
     @classmethod
-    def cells_changed(c, phase, cells_changed, world_map):
-        return c(phase, [], cells_changed, world_map)
+    def cells_changed(c, phase, cells_changed, world_map, data):
+        return c(phase, [], cells_changed, world_map, data)
         
     @classmethod
-    def no_cells_changed(c, phase, world_map):
-        return c(phase, [], [], world_map)
+    def no_cells_changed(c, phase, world_map, data):
+        return c(phase, [], [], world_map, data)
 
 ## Abstract Step classes ##
 
@@ -110,43 +111,49 @@ class CoastalPlanning(Step):
     def do(self):
         # first round reset
         for a in self.info.directory.get_agents():
-            a.round_reset()
+            a.round_reset()            
     
         municipality = self.info.directory.get_municipality()
         municipality.coastal_planning(
             self.info.map,
             self.info.directory.get_government().get_approved_complaints()
         )
-        return StepResult.no_cells_changed(self, self.info.map)
+        return StepResult.no_cells_changed(self, self.info.map, {})
     
 class Hearing(Step):
     def do(self):
+        data_dict = {}
         self.info.directory.get_government().new_vote_round()
         for agent in self.info.directory.get_voting_agents():
             agent.hearing(self.info.map)
-        return StepResult.no_cells_changed(self, self.info.map)
+        return StepResult.no_cells_changed(self, self.info.map, data_dict)
         
 class GovernmentDecision(DecisionStep):
    def do(self):
         government = self.info.directory.get_government()
         decision = government.voting_decision()
         return (
-            StepResult.no_cells_changed(self, self.info.map), decision
+            StepResult.no_cells_changed(self, self.info.map, {}), decision
         )
 
 class Fishing(Step):
     def do(self):
         # Agents do profit activities
         government = self.info.directory.get_government()
-        working_agents = self.info.directory.get_agents(exclude = government)
-        #for a in working_agents: a.work()
+        
+        working_agents = \
+            self.info.directory.get_agents(type = entities.Fisherman) + \
+            self.info.directory.get_agents(type = entities.Aquaculture)
+        
+        for a in working_agents: 
+            a.work()
         
         # (Local) Aquaculture companies pay some of their revenue to locals
         # through taxation
         for a in self.info.directory.get_agents(type = entities.Aquaculture):
             a.pay_taxes()
         
-        return StepResult.no_cells_changed(self, self.info.map)
+        return StepResult.no_cells_changed(self, self.info.map, {})
         
 class Building(Step):
     def do(self):
@@ -169,12 +176,14 @@ class Building(Step):
                 location
             ))
         return StepResult.cells_changed(
-            self, affected_cells, self.info.map
+            self, affected_cells, self.info.map, {}
         )
         
 class Learning(Step):
     def do(self):
+        data_dict = {}
+    
         for group in self.info.learning_mechanisms:
-            self.info.learning_mechanisms[group].learn(self.info)
+            self.info.learning_mechanisms[group].learn(self.info, data_dict)
         
-        return StepResult.no_cells_changed(self, self.info.map)
+        return StepResult.no_cells_changed(self, self.info.map, data_dict)

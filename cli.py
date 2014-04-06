@@ -31,18 +31,18 @@ class CommandLineInterface(object):
                 for r in reports:
                     print_phase_report(r)
                 print map_to_string(self.simulation_info.map)
-                reports = []
-                print "Current phase: %s" % current_phase
+                reports = []                
                 rounds, steps = get_numer_of_iterations()
             if rounds == 0:
                 steps -= 1
             else:
                 if new_round:
                     rounds -= 1
-            
+            print "Current phase: %s" % current_phase
             result = self.simulation.step()
             reports.append(result)
             new_round = result.new_round
+            print result.data
             
             # modify map
             self.simulation_info.map.grid = update_map(

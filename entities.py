@@ -276,7 +276,18 @@ class Government(CommunicatingAgent, PrioritizingAgent):
 #                   add_knowledge(<slot>)
 #   <slot>          go_fish(world_map)      Use knowledge to
 #                                           decide a fishing
-#                                           spot from the map            
+#                                           spot from the map           
+ 
+def find_working_cell(known_slots, world_map):
+    for cell in sorted(known.iterkeys(), key=lambda k: known[k] or 0):
+        if not cell.is_blocked():
+            return cell
+            
+    # If all cells are blocked, pick another random
+    all_slots = world_map.get_all_slots()
+    for cell in random.sample(all_slots, len(all_slots)):
+        if not cell.is_blocked():
+            return cell
 
 class Fisherman(ProducedAgent):
     """The specific implementation of a Fisherman.
@@ -291,16 +302,16 @@ class Fisherman(ProducedAgent):
         self.slot_knowledge[home_cell] = home_cell.get_fish_quantity()                   
         
     def work(self):
-        # find best slot
-        best_cell = max(
-            self.slot_knowledge.iterkeys(),
-            key=lambda k: self.slot_knowledge[k] or 0
-        )
+        cell = find_working_cell(self.slot_knowledge)
         
-        output = best_cell.get_fish_quantity() * self._fishing_efficiency
+        # run through market?
+        output = cell.get_fish_quantity() * self._fishing_efficiency        
         
-        # run output through market
+        # quantity updated
+        self.slot_knowledge[cell] = cell.get_fish_quantity()
+        
         self.capital += output
+        
 
 class Aquaculture(ProducedAgent):
     """Aquaculture agent implementation.

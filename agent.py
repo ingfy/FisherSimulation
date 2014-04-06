@@ -96,9 +96,11 @@ class PrioritizingAgent(object):
     def get_priorities_satisfaction(self, influences):
         s = 0.0
         t = 0.0
+        print "Priorities for %s" % str(self.get_id())
         for p in self._priorities:
             w = self._priorities[p]
             value = p.calculate_value(influences)
+            print "\t%s: %f" % (p.name, value)
             s += value * w
             t += w
         return s / t

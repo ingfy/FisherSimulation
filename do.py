@@ -181,20 +181,18 @@ class PhaseReport(object):
         messages    List<String>
         map         Map
         new_round:  Boolean
+        data:       A field where non-standard component data can be sent.
+                    Used through the phases module.
     """
     
-    def __init__(self, phase, messages, map, new_round):
-        self.phase = phase.name
-        self.messages = messages
-        self.map = map
-        self.new_round = new_round
-        
     @classmethod
     def from_step_result(c, result):
-        return c(
-            result.phase,
-            [Message.from_message(result.world_map, m) 
-                for m in result.messages],
-            Map.from_world_map(result.world_map, cells=result.cells_changed),
-            result.phase == "COASTPLAN"
-        )
+        obj = c()
+        obj.phase = result.phase.name
+        obj.messages = [Message.from_message(result.world_map, m) 
+                            for m in result.messages]
+        obj.map = Map.from_world_map(
+            result.world_map, cells=result.cells_changed)
+        obj.new_round = result.phase.name == "COASTPLAN"
+        obj.data = result.data
+        return obj

@@ -61,7 +61,7 @@ class Simulation(object):
             cfg_struct['good_spot_frequency']
         )
         map = world.Map(gs, 
-            self._cfg['structure']['aquaculture blocking radius']
+            self._cfg['world']['structure']['aquaculture blocking radius']
         )
         map.populate_fishermen(
             agent_factory, 

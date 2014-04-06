@@ -1,5 +1,6 @@
 import nn
 import math
+import numpy
 import priority
 import agent
 import entities
@@ -30,15 +31,15 @@ class Evolution(LearningMechanism):
         self._mutation_rate = config.mutation_rate
         self._genome_mutation_rate = config.genome_mutation_rate
         
-    def learn(self, simulation_info):
+    def learn(self, simulation_info, data):
         dir = simulation_info.directory
         all_agents = dir.get_agents()
         fishermen = dir.get_agents(type = entities.Fisherman)
         community_members = \
             dir.get_agents(type = entities.Fisherman) + \
             dir.get_agents(type = entities.Aquaculture) + \
-            dir.get_agents(type = entities.Civilian) + \
-            dir.get_agents(type = entities.Tourist)
+            dir.get_agents(type = entities.Civilian)# + \
+            #dir.get_agents(type = entities.Tourist)
         market = simulation_info.market
         world_map = simulation_info.map
         aquaculture_agents = dir.get_agents(type = entities.Aquaculture)
@@ -55,6 +56,14 @@ class Evolution(LearningMechanism):
         fitnesses = [(a.decision_mechanism, fitnesses[a], a) for a in sorted(
                 fitnesses.iterkeys(), key=lambda k: fitnesses[k]
         )] # returns an ordered list of (phenotype, fitness, agent) tuples
+        
+        # record average fitness
+        if not "fitness" in data:
+            data["fitness"] = {}
+        data["fitness"][self._phenotype.data_name] = numpy.mean(
+            [f for _, f, __ in fitnesses]
+        )
+            
         
         # keep elites
         elites, rest = fitnesses[:self._elitism], fitnesses[self._elitism:]
@@ -192,6 +201,8 @@ class DecisionMechanism(object):
 # Concrete decision making
             
 class FishermanVotingNN(vote.VotingDecisionMechanism, Phenotype):
+    data_name = "fisherman"
+
     inputs = [
             "distance", 
             "home conditions", 

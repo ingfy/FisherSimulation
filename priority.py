@@ -32,7 +32,7 @@ class Priority(object):
     # <dobule> calculate_value(...) should be implemented for all instances
     
     def __init__(self, name, calculate_value):
-        self._name = name
+        self.name = name
         self.calculate_value = calculate_value
         
 def OwnProfits_value(influences):
@@ -58,7 +58,7 @@ def NaturalFishHealth_value(influences):
     return sum([s.get_fish_quantity() for s in slots])/len(slots)
     
 def AquacultureIndustryExisting_value(influences):
-    return len(influences.aquaculture_agents)
+    return 1.0 if len(influences.aquaculture_agents) > 0 else 0.0
     
 def NonintrusiveAquaculture_value(infleucnes):
     slots = influences.agent.get_priority_slots()
