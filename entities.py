@@ -315,6 +315,18 @@ class Aquaculture(ProducedAgent):
         self.slot_knowledge[home] = home.get_fish_quantity()
         self._work_efficiency = 10
         self._taxation = 0.1
+        # broadcast arrival
+        self.broadcast_message(
+            messages.AquacultureSpawned(
+                messages.BroadcastMetaInfo(
+                    self,
+                    self.get_directory().get_agents(
+                        predicate=lambda e: e is not self
+                    )
+                ),
+                self.home
+            )
+        )
          
     def work(self):
         self.capital += self._work_efficiency

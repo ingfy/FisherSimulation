@@ -89,7 +89,15 @@ class Inform(Message):
 
     def get_str_summary(self, world_map):
         return self.str
-    
+        
+class AquacultureSpawned(Message):
+    def __init__(self, metainfo, location):
+        Message.__init__(self, metainfo)
+        self.location = location
+        
+    def get_str_summary(self, world_map):
+        return "Aquaculture spawned at (%d, %d)" % \
+            self.location.get_position(world_map)
 
 class PlanHearing(Message):
     def __init__(self, metainfo, plan):

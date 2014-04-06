@@ -87,14 +87,10 @@ class Map(object):
         
     @classmethod
     def from_world_map(c, world_map, cells=None):
-        s = world_map.get_structure()
-        if not cells is None: print len(cells)
-        g = [
+        return c([
             [Slot.from_world_slot(d) if cells is None or d in cells else None
                 for d in r] ###TODO::FIIIX
-            for r in s.get_grid()]
-        print g
-        return c(g)
+            for r in world_map.get_structure().get_grid()])
         
 class Slot(object):
     """ 
@@ -114,9 +110,18 @@ class Slot(object):
         self.blocked = blocked
         
     def __str__(self):
-        return "CELL[Land:%s, Spawn:%s, Aquaculture:%s, Fisherman:%s]" % \
-            ("YES" if e else "NO" for e in (self.spawning, self.aquaculture, 
-                                            self.fisherman, self.land)      )
+        attributes_text = {
+            "Land": self.land,
+            "Spawn": self.spawning,
+            "Aqltr": self.aquaculture,
+            "Fisher": self.fisherman,
+            "Blocked": self.blocked
+        }
+        return "CELL[%s]" % (
+            ", ".join(
+                ["%s: %s" % (key, "YES" if attributes_text[key] else "NO") 
+                    for key in attributes_text])
+        )
         
     @classmethod
     def from_world_slot(c, world_slot):

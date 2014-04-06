@@ -6,7 +6,8 @@
             "height": 20,
             "good_spot_frequency": 0.1,
             "cell_width": 25,
-            "cell_height": 25
+            "cell_height": 25,
+            "aquaculture blocking radius": 25
         }
     },
     "fisherman": {

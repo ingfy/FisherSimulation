@@ -60,7 +60,9 @@ class Simulation(object):
             (cfg_struct['cell_width'], cfg_struct['cell_height']), 
             cfg_struct['good_spot_frequency']
         )
-        map = world.Map(gs)
+        map = world.Map(gs, 
+            self._cfg['structure']['aquaculture blocking radius']
+        )
         map.populate_fishermen(
             agent_factory, 
             self._cfg['fisherman']['num']

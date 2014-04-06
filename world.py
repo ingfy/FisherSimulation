@@ -5,8 +5,9 @@ import entities
 class Map(object):
     _structure = None
     
-    def __init__(self, structure):
+    def __init__(self, structure, aquaculture_blocking_radius):
         self.set_structure(structure)
+        self._aquaculture_blocking_radius = aquaculture_blocking_radius
     
     def set_structure(self, structure):
         self._structure = structure
@@ -36,8 +37,8 @@ class Map(object):
     def get_cell_distance(self, a, b):
         return self._structure.get_cell_distance(a, b)
             
-    def build_aquaculture(self, agent, cell, blocking_radius):
-        radius = self.get_radius_from(cell, blocking_radius)
+    def build_aquaculture(self, agent, cell):
+        radius = self.get_radius_from(cell, self._aquaculture_blocking_radius)
         for b in radius:
             if not b == cell:
                 b.block()
@@ -78,6 +79,18 @@ class Slot(object):
         
     def set_land(self):
         self._land = True
+        
+    def get_position(self, world_map):
+        """Finds the position of this cell in the world map.
+        
+        Parameters:
+            world_map:  A Map object
+            
+        Returns:
+            A tuple of integers (x, y) representing the location in coordinate 
+            form.
+        """
+        return world_map.get_structure().get_cell_position(self)
         
     def set_fish_spawning(self):
         self._spawning = True

@@ -155,18 +155,18 @@ class Building(Step):
         licenses = government.distribute_licenses()
         spawner = self.info.aquaculture_spawner
         plan = municipality.get_plan()
-        blocking_radius = 100
+        blocking_radius = 25
         affected_cells = []
         for license in licenses:
             location = spawner.choose_cell(plan)
             agent = spawner.create(
                 self.info.agent_factory,
                 location
-            )            
-            affected_cells.append(self.info.map.build_aquaculture(
+            )
+            affected_cells.append(location)
+            affected_cells.extend(self.info.map.build_aquaculture(
                 agent, 
-                location, 
-                blocking_radius
+                location
             ))
         return StepResult.cells_changed(
             self, affected_cells, self.info.map
