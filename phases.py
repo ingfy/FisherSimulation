@@ -18,6 +18,7 @@ import plan
 
 class Round(object):
     def __init__(self, info):
+        self.info = info
         LEARNING = Learning(info, None, "LEARNING")
         FISHING2 = Fishing(info, LEARNING, "FISHING2")
         BUILDING = Building(info, FISHING2, "BUILDING")
@@ -38,6 +39,8 @@ class Round(object):
         if self._current_step is None:
             self._round_counter += 1
             self._current_step = self._start
+            # reset
+            for a in self.info.directory.get_agents(): a.round_reset()
         return result        
         
     def current(self):
@@ -109,10 +112,6 @@ class DecisionStep(Step):
 
 class CoastalPlanning(Step):
     def do(self):
-        # first round reset
-        for a in self.info.directory.get_agents():
-            a.round_reset()            
-    
         municipality = self.info.directory.get_municipality()
         municipality.coastal_planning(
             self.info.map,
@@ -125,13 +124,18 @@ class Hearing(Step):
         data_dict = {}
         self.info.directory.get_government().new_vote_round()
         for agent in self.info.directory.get_voting_agents():
-            agent.hearing(self.info.map)
+            agent.hearing(
+                self.info.map, 
+                self.info.cfg['global']['num_max_complaints']
+            )
         return StepResult.no_cells_changed(self, self.info.map, data_dict)
         
 class GovernmentDecision(DecisionStep):
    def do(self):
         government = self.info.directory.get_government()
-        decision = government.voting_decision()
+        decision = government.voting_decision(
+            self.info.cfg["global"]["max_hearing_rounds"]
+        )
         return (
             StepResult.no_cells_changed(self, self.info.map, {}), decision
         )
@@ -144,6 +148,16 @@ class Fishing(Step):
         working_agents = \
             self.info.directory.get_agents(type = entities.Fisherman) + \
             self.info.directory.get_agents(type = entities.Aquaculture)
+            
+        fishermen = self.info.directory.get_agents(type = entities.Fisherman)
+        
+        affected_cells = []
+        
+        for f in fishermen:
+            old_home = f.home
+            f.find_fishing_spot(self.info.map)
+            if old_home != f.home:
+                affected_cells.extend([f.home, old_home])
         
         for a in working_agents: 
             a.work()
@@ -153,7 +167,7 @@ class Fishing(Step):
         for a in self.info.directory.get_agents(type = entities.Aquaculture):
             a.pay_taxes()
         
-        return StepResult.no_cells_changed(self, self.info.map, {})
+        return StepResult.cells_changed(self, affected_cells, self.info.map, {})
         
 class Building(Step):
     def do(self):
@@ -166,18 +180,17 @@ class Building(Step):
         affected_cells = []
         for license in licenses:
             location = spawner.choose_cell(plan)
-            agent = spawner.create(
-                self.info.agent_factory,
-                location
-            )
-            affected_cells.append(location)
-            affected_cells.extend(self.info.map.build_aquaculture(
-                agent, 
-                location
-            ))
-        return StepResult.cells_changed(
-            self, affected_cells, self.info.map, {}
-        )
+            if not location is None:
+                agent = spawner.create(
+                    self.info.agent_factory,
+                    location
+                )
+                affected_cells.append(location)
+                affected_cells.extend(self.info.map.build_aquaculture(
+                    agent, 
+                    location
+                ))
+        return StepResult.cells_changed(self, affected_cells, self.info.map, {})
         
 class Learning(Step):
     def do(self):

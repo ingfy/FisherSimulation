@@ -58,7 +58,7 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
         self.slot_knowledge = {}
         self.threats = []
         self.decision_mechanism = None
-        self._guess_when_complain = 1.0
+        self._guess_when_complain = 0.6
         self._plan_message = None
     
     # Abstract methods
@@ -76,13 +76,14 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
         self._plan_message = message
         
     def vote_response_inform_notification(self, message):
-        for v in message.reply_to.votes:
+        for v in [c for c in message.reply_to.votes if c.is_complaint()]:
             cell = v.cell
             if not cell in self.slot_knowledge:
                 self.slot_knowledge[cell] = self._guess_when_complain
         
-    def hearing(self, world_map):        
-        votes = self.decide_votes(self._plan_message.plan, world_map)
+    def hearing(self, world_map, num_max_complaints):        
+        votes = self.decide_votes(self._plan_message.plan, world_map, 
+            num_max_complaints)
         gov = self.get_directory().get_government()
         self.send_message(
             gov,
@@ -93,8 +94,9 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
             )
         )
             
-    def decide_votes(self, plan, world_map):
-        return self.decision_mechanism.decide_votes(self, plan, world_map)    
+    def decide_votes(self, plan, world_map, num_max_complaints):
+        return self.decision_mechanism.decide_votes(self, plan, world_map, 
+            num_max_complaints)    
         
         
 # AquacultureSpawner
@@ -107,7 +109,10 @@ class AquacultureSpawner(object):
     
     def choose_cell(self, plan):
         # Maybe it should choose the best cell based on public information
-        return random.choice(plan.aquaculture_sites())
+        try:
+            return random.choice(plan.aquaculture_sites())
+        except IndexError:  # no aquaculture sites left
+            return None
         
     def create(self, factory, cell):
         agent = factory.aquaculture(cell)
@@ -218,6 +223,8 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         self._decision_mechanism = \
             decision_mechanism or ComplaintApproveMoreThanOne()
         self._licenses = []
+        self.hearing_count = 0
+        self.max_hearing_count = 3
         
     def distribute_licenses(self):
         num_licenses = 5
@@ -229,6 +236,7 @@ class Government(CommunicatingAgent, PrioritizingAgent):
             
     def round_reset(self):
         self.new_vote_round()
+        self.hearing_count = 0
         
     def vote(self, message):
         for v in message.votes:
@@ -250,7 +258,11 @@ class Government(CommunicatingAgent, PrioritizingAgent):
             )
         )
         
-    def voting_decision(self):
+    def voting_decision(self, max_hearing_rounds):
+        if self.hearing_count >= max_hearing_rounds:
+            return plan.Decision.APPROVE
+            
+        self.hearing_count += 1
         all_voters = self.get_directory().get_agents(exclude = self)
         for cell in self._complaints:
             self._decision_mechanism.set_input_values({
@@ -265,7 +277,8 @@ class Government(CommunicatingAgent, PrioritizingAgent):
             else plan.Decision.APPROVE
 
     def get_approved_complaints(self):
-        return [c for c in self._complaints if c.approved]
+        return [self._complaints[s] for s in 
+            self._complaints if self._complaints[s].approved]
 
 ##
 ## NON-GOVERNMENT AGENTS: VOTERS, PRODUCEDAGENTS
@@ -277,17 +290,6 @@ class Government(CommunicatingAgent, PrioritizingAgent):
 #   <slot>          go_fish(world_map)      Use knowledge to
 #                                           decide a fishing
 #                                           spot from the map           
- 
-def find_working_cell(known_slots, world_map):
-    for cell in sorted(known.iterkeys(), key=lambda k: known[k] or 0):
-        if not cell.is_blocked():
-            return cell
-            
-    # If all cells are blocked, pick another random
-    all_slots = world_map.get_all_slots()
-    for cell in random.sample(all_slots, len(all_slots)):
-        if not cell.is_blocked():
-            return cell
 
 class Fisherman(ProducedAgent):
     """The specific implementation of a Fisherman.
@@ -298,19 +300,55 @@ class Fisherman(ProducedAgent):
     def __init__(self, directory, priorities, home_cell):
         ProducedAgent.__init__(self, directory, priorities)
         self.home = home_cell
+        self.first_home = self.home #TODO:DELETE
+        self.home.populate(self)
         self._fishing_efficiency = 1.0
-        self.slot_knowledge[home_cell] = home_cell.get_fish_quantity()                   
+        self.slot_knowledge[home_cell] = home_cell.get_fishing_efficiency()
         
-    def work(self):
-        cell = find_working_cell(self.slot_knowledge)
+    def find_fishing_spot(self, world):
+        sorted_known = sorted(
+            self.slot_knowledge.iterkeys(),
+            key = lambda k: self.slot_knowledge[k] or 0,
+            reverse=True
+        )
         
+        #print self.first_home in sorted_known
+        #print self.slot_knowledge[self.first_home]
+        #print [(c,self.slot_knowledge[c]) for c in sorted_known]
+        
+        all_cells = world.get_all_cells()
+        shuffled_world = random.sample(all_cells, len(all_cells))
+        
+        cell = next(
+            (cell for cell in sorted_known if not cell.is_blocked()), 
+            None
+        )
+        
+        if cell is None or self.slot_knowledge[cell] < 0.5: # base value
+            # If we have no knowledge of any unblocked cells, OR
+            # every cell has a known output lower than 0.5, try a different
+            # cell in the world.
+            cell = next(
+                (cell for cell in shuffled_world if not cell.is_blocked()), 
+                None
+            )
+        
+        if not cell is None:
+            # change home
+            # if not occupied
+            self.home.remove(self)
+            cell.populate(self)
+            self.home = cell
+    
+    def work(self):    
         # run through market?
-        output = cell.get_fish_quantity() * self._fishing_efficiency        
+        output = self.home.get_fishing_efficiency() * self._fishing_efficiency        
         
         # quantity updated
-        self.slot_knowledge[cell] = cell.get_fish_quantity()
+        self.slot_knowledge[self.home] = self.home.get_fishing_efficiency()
         
         self.capital += output
+        print "fisherman worked %f." % output
         
 
 class Aquaculture(ProducedAgent):

@@ -13,11 +13,18 @@ class Vote(object):
         assert value in [APPROVE, DISAPPROVE], "Invalid vote value."
         self.value = value
         self.cell = cell
+        
+    @classmethod
+    def complaint(c, cell):
+        return c(cell, DISAPPROVE)
+        
+    def is_complaint(self):
+        return self.value == DISAPPROVE
 
 class VotingDecisionMechanism(object):
     """Interface for voting decisions."""
     
-    def decide_votes(self, agent, coastal_plan, world_map):
+    def decide_votes(self, agent, coastal_plan, world_map, max_complaints):
         """Decide whether to complain or not for each vote.
         
         Arguments:
@@ -27,6 +34,9 @@ class VotingDecisionMechanism(object):
         Returns:
             A list of Vote instances with APPROVE or DISAPPROVE values for cells 
             with planned aquaculture in the plan.
+            
+            There is a maximum number of complaints allowed, so they have to
+            be prioritized.
         """
         raise NotImplementedException()
         

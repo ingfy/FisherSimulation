@@ -23,31 +23,47 @@ class CommandLineInterface(object):
         
     def run_phases(self):
         new_round = False
-        rounds = steps = 0
+        rounds = 0
+        steps = 1
         reports = []
-        while True:
+        prev_phase = None
+        while True:            
             current_phase = self.simulation.get_current_phase()            
-            if rounds == 0 and steps == 0:
-                for r in reports:
-                    print_phase_report(r)
-                print map_to_string(self.simulation_info.map)
-                reports = []                
-                rounds, steps = get_numer_of_iterations()
+            new_round = current_phase == "COASTPLAN" and prev_phase == "LEARNING"
             if rounds == 0:
                 steps -= 1
             else:
                 if new_round:
                     rounds -= 1
+            if rounds == 0 and steps == 0:
+                if len(reports) > 0:
+                    print "Rounds done."
+                    report_mode = get_report_mode()
+                    if report_mode == "all":
+                        for r in reports:
+                            print_phase_report(r)
+                        print map_to_string(self.simulation_info.map)
+                    elif report_mode == "last":
+                        print_phase_report(reports[-1])
+                        print map_to_string(self.simulation_info.map)
+                else:
+                    print map_to_string(self.simulation_info.map)
+                # else do nothing
+                
+                reports = []
+                print "Next phase: %s" % current_phase
+                rounds, steps = get_numer_of_iterations()
             print "Current phase: %s" % current_phase
             result = self.simulation.step()
-            reports.append(result)
-            new_round = result.new_round
+            reports.append(result)            
+            
             print result.data
             
             # modify map
             self.simulation_info.map.grid = update_map(
                 self.simulation_info.map.grid, result.map.grid
             )
+            prev_phase = result.phase
 
     def exit(self):
         print "Simulation finished."
@@ -69,9 +85,9 @@ map_modifier_explanations = [
     "* means good fishing (spawning)"
 ]
 def map_to_string(map, include_symbols=True):
-    str = "M A P"
+    header = "M A P"
     if include_symbols:
-        str += ", symbols:\n" + \
+        header += ", symbols:\n" + \
             "\t" + ", ".join(map_symbol_explanations) + ".\n" + \
             "\tModifiers: " + ", ".join(map_modifier_explanations) + "."
     r_num = 0
@@ -91,11 +107,17 @@ def map_to_string(map, include_symbols=True):
                 cell.append("F")
             else:
                 cell.append(" ")
-            modifier = "*" if slot.spawning else " "
+            
+            if slot.fisherman:
+                modifier = str(slot.num_fishermen) if \
+                    slot.num_fishermen <= 9 else "+"
+            else:
+                modifier = "*" if slot.spawning else " "
+                
             cell.append(modifier)
             line.append("".join(cell))
         lines.append(" ".join(line))
-    return str + "\n" + "\n".join(lines)
+    return header + "\n" + "\n".join(lines)
         
 def print_phase_report(phase_report):
     print "Phase: %s" % phase_report.phase
@@ -109,6 +131,18 @@ def print_phase_report(phase_report):
     for ((x, y), cell) in changed_cells:
         print "Cell changed at (%d, %d). Now: %s" % (x, y, cell)    
         
+def get_report_mode():
+    try:
+        return {"E": "all", "L": "last", "N": None}[input_or_default(
+            "Reporting how much? (E)verything, (L)ast phase, or (N)othing?",
+            "L"
+        )]
+    except KeyboardInterrupt:
+        raise
+    except:
+        print "Invalid format."
+        return get_report_mode()
+
 def get_numer_of_iterations():
     try:
         rounds, steps = (int(e) for e in input_or_default(
@@ -121,7 +155,7 @@ def get_numer_of_iterations():
         raise
     except:
         print "Invalid format."
-        get_numer_of_iterations()
+        return get_numer_of_iterations()
         
 def input_or_default(str, default):
     data = raw_input(str + " [%s] " % default)

@@ -94,21 +94,15 @@ class Map(object):
         
 class Slot(object):
     """ 
-    Public members:
+    Attributes:
         spawning        Boolean
         aquaculture     Boolean
         fisherman       Boolean
         land            Boolean
         blocked         Boolean
+        num_fishermen   Integer
     """
     
-    def __init__(self, spawning, aquaculture, fisherman, land, blocked):
-        self.spawning = spawning
-        self.aquaculture = aquaculture
-        self.fisherman = fisherman
-        self.land = land
-        self.blocked = blocked
-        
     def __str__(self):
         attributes_text = {
             "Land": self.land,
@@ -125,14 +119,19 @@ class Slot(object):
         
     @classmethod
     def from_world_slot(c, world_slot):
-        occupant = world_slot.get_occupant()
-        return c(
-            world_slot.fish_spawning(),
-            occupant is not None and occupant.__class__ is entities.Aquaculture,
-            occupant is not None and occupant.__class__ is entities.Fisherman,
-            world_slot.is_land(),
-            world_slot.is_blocked()
-        )
+        occupants = world_slot.get_occupants()
+        obj = c()
+        
+        obj.spawning =  world_slot.fish_spawning()
+        obj.aquaculture = next((o for o in occupants if 
+            o.__class__ is entities.Aquaculture), None) is not None
+        obj.fisherman = next((o for o in occupants if 
+            o.__class__ is entities.Fisherman), None) is not None
+        obj.land = world_slot.is_land()
+        obj.blocked = world_slot.is_blocked()
+        obj.num_fishermen = len(occupants) if obj.fisherman else 0
+        
+        return obj
         
 class Message(object):
     """Direct object representation of Message
@@ -193,6 +192,5 @@ class PhaseReport(object):
                             for m in result.messages]
         obj.map = Map.from_world_map(
             result.world_map, cells=result.cells_changed)
-        obj.new_round = result.phase.name == "COASTPLAN"
         obj.data = result.data
         return obj

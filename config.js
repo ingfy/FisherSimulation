@@ -1,4 +1,8 @@
 {
+    "global": {
+        "num_max_complaints": 10,
+        "max_hearing_rounds": 3
+    },
     "world": {
         "structure": {
             "type": "grid",
@@ -8,7 +12,7 @@
             "cell_width": 25,
             "cell_height": 25,
             "aquaculture blocking radius": 25
-        }
+        }        
     },
     "fisherman": {
         "num": 25,

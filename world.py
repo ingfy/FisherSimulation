@@ -15,6 +15,11 @@ class Map(object):
     def get_structure(self):
         return self._structure
         
+    def get_max_distance(self):
+        return self._structure.get_distance(
+            (0, 0), tuple([e - 1 for e in self._structure.get_size()])
+        )
+        
     def get_random_cell(self, predicate = None):
         return random.choice(self.get_all_cells(predicate))
         
@@ -61,15 +66,15 @@ class Map(object):
 # Assume that all occupants can be converted to strings
 
 class Slot(object):
-    def __init__(self, occupant=None):
-        self._occupant = occupant
+    def __init__(self, occupants=None):
+        self._occupants = occupants or []
         self._spawning = False
         self._blocked = False
         self._land = False
         self._fish_quantity = 0.5
 
-    def get_occupant(self):
-        return self._occupant
+    def get_occupants(self):
+        return self._occupants
 
     def is_blocked(self):
         return self._blocked
@@ -98,6 +103,15 @@ class Slot(object):
         
     def get_fish_quantity(self):
         return self._fish_quantity
+        
+    def get_fishing_efficiency(self):
+        """Calculates the fishing output of this slot.
+        
+        Fishing output is shared evenly among all occupants.
+        
+        Returns a floating-point number.
+        """
+        return self._fish_quantity / len(self._occupants)
 
     def fish_spawning(self):
         return self._spawning
@@ -106,15 +120,16 @@ class Slot(object):
         self._blocked = True
 
     def populate(self, agent):
-        self._occupant = agent
+        if not agent in self._occupants:
+            self._occupants.append(agent)
+        
+    def remove(self, agent):
+        if agent in self._occupants:
+            self._occupants.remove(agent)
 
     def build_aquaculture(self, agent):
-        self._occupant = agent
+        self._occupants = [agent]
         self._blocked = True
-
-    def __str__(self):
-        surround = "s{%s}" if self._spawning else "s[%s]"
-        return surround % (str(self._occupant) if self._occupant is not None else " ")
         
 # Abstract Structure class
 class AbstractStructure(object):

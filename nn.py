@@ -1,4 +1,5 @@
 import random
+import numpy
 
 def convert_edge_tuples(edges, label_to_neuron, neurons):
     out = {a: {b: 0.0 for b in neurons} for a in neurons}
@@ -20,6 +21,7 @@ class LabeledNeuralNetwork(object):
         self.inputs = {label: Neuron(0.0, Neuron.INPUT) for label in inputs}
         self.outputs = {label: Neuron(0.0, Neuron.OUTPUT) for label in outputs}
         self.hiddens = {label: Neuron(0.0, Neuron.HIDDEN) for label in hiddens}
+        self.hiddens["bias"] = Neuron(-1.0, Neuron.HIDDEN) # add bias node
         connectivity_valid, err = self.validate_edges(edges)
         assert connectivity_valid, "Invalid edges. " + err
         self.edges = convert_edge_tuples(edges, {
@@ -33,7 +35,7 @@ class LabeledNeuralNetwork(object):
     
     def neurons(self):
         return [e for l in [self.inputs, self.hiddens, self.outputs] 
-            for e in l.values()]            
+            for e in l.values()]
         
     def validate_edges(self, edges):
         # Check that all labels in connectivity have a match
@@ -61,8 +63,11 @@ class LabeledNeuralNetwork(object):
         return self.outputs[label].value
         
     def update(self):
-        for n in self.neurons():
-            n.value = sum([m.value * self.edges[n][m] for m in self.neurons()])
+        for n in self.hiddens.values() + self.outputs.values():
+            # sigmoid
+            n.value = 1/(1 + numpy.exp(
+                -sum([m.value * self.edges[m][n] for m in self.neurons()])
+            ))
         
         
 class Neuron(object):

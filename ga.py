@@ -199,6 +199,68 @@ class DecisionMechanism(object):
         raise NotImplementedException()
             
 # Concrete decision making
+
+class FishermanVotingRules(vote.VotingDecisionMechanism, Phenotype):
+    data_name = "fisherman"
+    
+    DIST_PROB = "Distance Probability"
+    COMPLAIN_10 = "Always complain 10"
+    APPROVE_ALL = "Never complain"
+    
+    
+    def __init__(self, genotype):
+        Phenotype.__init__(self, genotype)
+        self.rule = genotype.to_rule()
+        
+        # Rules:
+        # - distance proportional probabilistic decision        
+        # - always complain 10 random        
+        # - never complain
+        
+    rule_to_method = {
+        DIST_PROB: _dist_prob,
+        COMPLAIN_10: _complain_10,
+        APPROVE_ALL = _approve_all
+    }
+    
+    def _dist_prob(self, agent, coastal_plan, world_map, num_max_complaints):
+        vote_strength = {}
+        for cell in coastal_plan:
+            norm_distance = world_map.get_cell_distance(agent.home, cell) / \
+                world_map.get_max_distance()
+            value = random.random() * norm_distance
+            complain = value > 0.5
+            if complain:
+                vote_strength[vote.Vote.complaint(cell)] = value
+                
+        return sorted(
+            vote_strength.iterkeys(),
+            key=lambda e: vote_strength[e],
+            reverse=True
+        )[:num_max_complaints]
+        
+    def _complain_10(self, agent, coastal_plan, world_map, num_max_complaints):
+        pass
+    
+    def _approve_all(self, agent, coastal_plan, world_map, num_max_complaints):
+        pass
+        
+    def decide_votes(self, agent, coastal_plan, world_map, num_max_complaints):
+        return rule_to_method[self.rule](
+            self, agent, coastal_plan, world_map, num_max_complaints
+        )
+        
+class FishermanRulesGenotype(Genotype):
+    length = 3
+    
+    def to_rule(self):
+        return {
+            0: FishermanVotingRules.DIST_PROB,
+            1: FishermanVotingRules.COMPLAIN_10,
+            2: FishermanVotingRules.APPROVE_ALL
+        }[int(self.genome, 2) / 2]
+    
+        
             
 class FishermanVotingNN(vote.VotingDecisionMechanism, Phenotype):
     data_name = "fisherman"
@@ -221,10 +283,11 @@ class FishermanVotingNN(vote.VotingDecisionMechanism, Phenotype):
         ] + [
             # All hidden neurons to themselves
             (a, a) for a in self.hiddens
+        ] + [
+            # Bias node to hidden layer nodes
+            ("bias", a) for a in self.hiddens
         ]
-        self.edges = zip(self.connections, 
-            [float(e) / 2**FishermanNNGenotype.precision for e in 
-                self.genotype.to_number_list()])
+        self.edges = zip(self.connections, self.genotype.to_number_list())
         self.network = nn.LabeledNeuralNetwork(
             FishermanVotingNN.inputs, 
             FishermanVotingNN.outputs, 
@@ -232,24 +295,31 @@ class FishermanVotingNN(vote.VotingDecisionMechanism, Phenotype):
             self.edges
         )
         
-    def decide_votes(self, agent, coastal_plan, world_map):
-        votes = []
-        for cell in coastal_plan:
+    def decide_votes(self, agent, coastal_plan, world_map, num_max_complaints):
+        vote_strength = {}
+        for cell in coastal_plan.aquaculture_sites():
             home = agent.home
-            distance = world_map.get_cell_distance(home, cell)
-            cond = cell.get_fish_quantity() if \
+            distance = world_map.get_cell_distance(home, cell) / \
+                world_map.get_max_distance()
+            cond = agent.slot_knowledge[cell] if \
                 cell in agent.slot_knowledge else 0.0
-            self.network.set_input_values({
+            values = {
                 "distance":             distance,
-                "home conditions":      home.get_fish_quantity(),
+                "home conditions":      agent.slot_knowledge[home],
                 "targeted conditions":  cond
-            })
+            }
+            self.network.set_input_values(values)
             self.network.update()
-            complain = self.network.get_output_values()["vote"] > 0.5
-            votes.append(
-                vote.Vote(cell, vote.DISAPPROVE if complain else vote.APPROVE)
-            )
-        return votes
+            output = self.network.get_output_values()
+            complain = output["vote"] > 0.5
+            if complain:
+                vote_strength[vote.Vote.complaint(cell)] = output["vote"]                
+        
+        return sorted(
+            vote_strength.iterkeys(),
+            key=lambda e: vote_strength[e],
+            reverse=True
+        )[:num_max_complaints]
         
     @classmethod
     def new(c, agent, config, world):
@@ -263,8 +333,13 @@ class FishermanNNGenotype(Genotype):
     precision = 8  # bits per 1
     weight_range = (-1, 1)
     length = (
+        # Input to hidden layer
         len(phenotype_class.inputs)  * len(phenotype_class.hiddens) +
+        # Hidden layer to outputs
         len(phenotype_class.hiddens) * len(phenotype_class.outputs) +
+        # Recurrent hidden layer-connections
+        len(phenotype_class.hiddens) +
+        # Bias node to hidden layer nodes
         len(phenotype_class.hiddens)
     ) * (weight_range[1] - weight_range[0]) * precision
     
@@ -272,4 +347,4 @@ class FishermanNNGenotype(Genotype):
         def sep(str, acc):
             if len(str) < self.precision: return acc
             return sep(str[self.precision:], acc + [str[:self.precision]])
-        return [int(''.join(e), 2) for e in sep(self.genome, [])]        
+        return [self.weight_range[0] + int(''.join(e), 2) / 2.0 ** self.precision * (self.weight_range[1] - self.weight_range[0]) for e in sep(self.genome, [])]
