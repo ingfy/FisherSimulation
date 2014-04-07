@@ -217,15 +217,10 @@ class FishermanVotingRules(vote.VotingDecisionMechanism, Phenotype):
         # - always complain 10 random        
         # - never complain
         
-    rule_to_method = {
-        DIST_PROB: _dist_prob,
-        COMPLAIN_10: _complain_10,
-        APPROVE_ALL = _approve_all
-    }
     
     def _dist_prob(self, agent, coastal_plan, world_map, num_max_complaints):
         vote_strength = {}
-        for cell in coastal_plan:
+        for cell in coastal_plan.aquaculture_sites():
             norm_distance = world_map.get_cell_distance(agent.home, cell) / \
                 world_map.get_max_distance()
             value = random.random() * norm_distance
@@ -240,15 +235,26 @@ class FishermanVotingRules(vote.VotingDecisionMechanism, Phenotype):
         )[:num_max_complaints]
         
     def _complain_10(self, agent, coastal_plan, world_map, num_max_complaints):
-        pass
+        return [vote.Vote.complaint(c) for c in
+            random.sample(coastal_plan, num_max_complaints)]
     
     def _approve_all(self, agent, coastal_plan, world_map, num_max_complaints):
-        pass
+        return []
+        
+    rule_to_method = {
+        DIST_PROB: _dist_prob,
+        COMPLAIN_10: _complain_10,
+        APPROVE_ALL: _approve_all
+    }
         
     def decide_votes(self, agent, coastal_plan, world_map, num_max_complaints):
         return rule_to_method[self.rule](
             self, agent, coastal_plan, world_map, num_max_complaints
         )
+        
+    @classmethod
+    def new(c, agent, config, world):
+        agemt.add_voting_mechanism(c(FishermanRulesGenotype.random()))
         
 class FishermanRulesGenotype(Genotype):
     length = 3
@@ -259,8 +265,7 @@ class FishermanRulesGenotype(Genotype):
             1: FishermanVotingRules.COMPLAIN_10,
             2: FishermanVotingRules.APPROVE_ALL
         }[int(self.genome, 2) / 2]
-    
-        
+
             
 class FishermanVotingNN(vote.VotingDecisionMechanism, Phenotype):
     data_name = "fisherman"

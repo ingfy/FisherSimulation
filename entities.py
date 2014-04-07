@@ -348,7 +348,6 @@ class Fisherman(ProducedAgent):
         self.slot_knowledge[self.home] = self.home.get_fishing_efficiency()
         
         self.capital += output
-        print "fisherman worked %f." % output
         
 
 class Aquaculture(ProducedAgent):
