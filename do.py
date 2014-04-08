@@ -147,7 +147,7 @@ class Message(object):
         recipient_line = ("Recipient: %s" % self.recipient) if \
             self.type == "single" else \
             ("Recipients:%s" % util.smart_line_sep(
-                self.recipients, ", ", 100, "\n" + " "*12))
+                self.recipients, ", ", 70, "\n" + " "*12))
         return "Message:\n\t" + '\n\t'.join([
             "Type: %s"      % self.type     ,            
             "Sender: %s"    % self.sender   ,
@@ -167,7 +167,7 @@ class Message(object):
             message.recipients = [a.get_id() for a in msg.metainfo.targets]
             message.recipient = None
         else:
-            message.recipient = msg.metainfo.target
+            message.recipient = msg.metainfo.target.get_id()
             message.recipients = None
         message.timestamp = msg.metainfo.timestmap
         message.contents = msg.get_str_summary(world_map)

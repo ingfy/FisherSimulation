@@ -54,3 +54,14 @@ class VotingDecisionMechanism(object):
             world:  The world instance
         """
         raise NotImplementedException()
+        
+
+# Concrete
+
+class AlwaysApprove(VotingDecisionMechanism):
+    def decide_votes(self, agent, coastal_plan, world_map, max_complaints):
+        return []
+        
+    @classmethod
+    def new(c, agent, config, world):
+        agent.add_voting_mechanism(c())

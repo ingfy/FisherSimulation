@@ -6,8 +6,8 @@
     "world": {
         "structure": {
             "type": "grid",
-            "width": 20,
-            "height": 20,
+            "width": 25,
+            "height": 25,
             "good_spot_frequency": 0.1,
             "cell_width": 25,
             "cell_height": 25,
@@ -17,7 +17,7 @@
     "fisherman": {
         "num": 25,
         "priorities": {
-            "OwnProfits":                    5.0,
+            "OwnProfits":                    10.0,
             "CommunityWealth":               2.0,
             "WildFishPrice":                 2.0,
             "FishingIndustryExisting":       3.0,
@@ -62,7 +62,7 @@
         },
         "voting mechanism class": {
             "type":     "class",
-            "class":    "ga.FishermanVotingNN"
+            "class":    "vote.AlwaysApprove"
         }
     },
     "civilian": {
@@ -73,7 +73,10 @@
             "AquacultureIndustryExisting":   3.0,
             "NonintrusiveAquaculture":       1.0
         },
-        "voting mechanism class":           "ga.FishermanVotingNN"
+        "voting mechanism class":           {
+            "type": "class",
+            "class": "vote.AlwaysApprove"
+        }
     },
     "tourist": {
         "num": 30,
@@ -82,18 +85,19 @@
             "FishingIndustryExisting":       2.0,
             "NonintrusiveAquaculture":       2.0  
         },
-        "voting mechanism class":           "ga.FishermanVotingNN"
+        "voting mechanism class":           {
+            "type": "class",
+            "class": "vote.AlwaysApprove"
+        }
     },
     "government": {
         "num": 1,
         "priorities": {
-            "PopulationHappiness":           1.0     
         }
     },
     "municipality": {
         "num": 1,
         "priorities": {
-            "PopulationHappiness":           1.0     
         }
     },
     "aquaculture_spawner": {

@@ -66,6 +66,7 @@ class CommandLineInterface(object):
             prev_phase = result.phase
 
     def exit(self):
+        # save log and stuff        
         print "Simulation finished."
         print map_to_string(self.simulation_info.map)
         

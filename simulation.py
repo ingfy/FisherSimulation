@@ -10,10 +10,11 @@ import do
 import time
 import ga
 import multiprocessing
+import log
 
 class SimulationInfo(object):
     def __init__(self, map, cfg, directory, market, agent_factory, 
-            aquaculture_spawner, learning_mechanisms):
+            aquaculture_spawner, learning_mechanisms, logger):
         self.map = map
         self.cfg = cfg
         self.directory = directory
@@ -21,6 +22,7 @@ class SimulationInfo(object):
         self.agent_factory = agent_factory
         self.aquaculture_spawner = aquaculture_spawner
         self.learning_mechanisms = learning_mechanisms
+        self.logger = logger
         
 
 ## Simulation MAIN module ##
@@ -41,7 +43,9 @@ class Simulation(object):
         
     def initialize(self):
         assert not self._cfg is None, \
-            "Configuration not initiated. Run setup_config()"        
+            "Configuration not initiated. Run setup_config()"
+            
+        logger = log.Logger.new()
             
         dir = directory.Directory()
         agent_factory = entities.AgentFactory(dir, self._cfg)
@@ -103,19 +107,7 @@ class Simulation(object):
                 learning_mechanisms[entity] = learning(
                     dir.get_agents(type = entity),
                     config.from_dict(self._cfg[name]["learning mechanism"])
-                )
-        
-        ## Fishermen
-        # fishermen_learning_class = \
-            # self._cfg['fisherman']['learning mechanism']['class']
-        # fishermen_learning_config_class = \
-            # self._cfg['fisherman']['learning mechanism']['config class']
-        # fisherman_learning = fishermen_learning_class(
-            # dir.get_agents(type = entities.Fisherman),
-            # fishermen_learning_config_class.from_dict(
-                # self._cfg['fisherman']['learning mechanism']
-            # )
-        # )
+                )        
         
         info = SimulationInfo(
             map, 
@@ -124,7 +116,8 @@ class Simulation(object):
             market.Market(),
             agent_factory, 
             aquaculture_spawner,
-            learning_mechanisms
+            learning_mechanisms,
+            logger
         )
                 
         self._round = phases.Round(info)

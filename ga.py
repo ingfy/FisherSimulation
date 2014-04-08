@@ -10,7 +10,7 @@ import vote
 
 class LearningMechanism(object):
     def __init__(self, agents):
-        self._agents = agents
+        self.agents = agents
         
     def learn(self):
         raise NotImplementedException()
@@ -31,38 +31,14 @@ class Evolution(LearningMechanism):
         self._mutation_rate = config.mutation_rate
         self._genome_mutation_rate = config.genome_mutation_rate
         
-    def learn(self, simulation_info, data):
-        dir = simulation_info.directory
-        all_agents = dir.get_agents()
-        fishermen = dir.get_agents(type = entities.Fisherman)
-        community_members = \
-            dir.get_agents(type = entities.Fisherman) + \
-            dir.get_agents(type = entities.Aquaculture) + \
-            dir.get_agents(type = entities.Civilian)# + \
-            #dir.get_agents(type = entities.Tourist)
-        market = simulation_info.market
-        world_map = simulation_info.map
-        aquaculture_agents = dir.get_agents(type = entities.Aquaculture)
-        fitnesses = {
-            agent: agent.get_priorities_satisfaction(
-                priority.Influences(
-                    agent, all_agents, market, community_members, fishermen, 
-                    world_map, aquaculture_agents
-                )
-            ) for agent in self._agents
-        }
+    def learn(self, fitnesses):
         
         # sorted
         fitnesses = [(a.decision_mechanism, fitnesses[a], a) for a in sorted(
                 fitnesses.iterkeys(), key=lambda k: fitnesses[k]
-        )] # returns an ordered list of (phenotype, fitness, agent) tuples
+        ) if a in self.agents] 
+            # returns an ordered list of (phenotype, fitness, agent) tuples
         
-        # record average fitness
-        if not "fitness" in data:
-            data["fitness"] = {}
-        data["fitness"][self._phenotype.data_name] = numpy.mean(
-            [f for _, f, __ in fitnesses]
-        )
             
         
         # keep elites

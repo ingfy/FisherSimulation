@@ -93,7 +93,8 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
                 votes
             )
         )
-            
+        return votes
+        
     def decide_votes(self, plan, world_map, num_max_complaints):
         return self.decision_mechanism.decide_votes(self, plan, world_map, 
             num_max_complaints)    

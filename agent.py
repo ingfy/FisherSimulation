@@ -103,4 +103,4 @@ class PrioritizingAgent(object):
             #print "\t%s: %f" % (p.name, value)
             s += value * w
             t += w
-        return s / t
+        return s / t if t != 0.0 else 1.0

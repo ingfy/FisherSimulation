@@ -63,11 +63,6 @@ def AquacultureIndustryExisting_value(influences):
 def NonintrusiveAquaculture_value(infleucnes):
     slots = influences.agent.get_priority_slots()
     return sum([0 if s.has_aquaculture() else 1 for s in slots])/len(slots)
-    
-def PopulationHappiness_value(influences):
-    return numpy.median([a.get_priorities_satisfaction(
-        influences.copy_for(a)
-    ) for a in influences.agents if a != influences.agent])
 
 # Exported real priorities
 OwnProfits = Priority("Own Profits", OwnProfits_value)
@@ -78,4 +73,3 @@ FishingIndustryExisting = Priority("Fishing Industry Existing", FishingIndustryE
 NaturalFishHealth = Priority("Natural Fish Health", NaturalFishHealth_value)
 AquacultureIndustryExisting = Priority("Aquaculture Industry Existing", AquacultureIndustryExisting_value)
 NonintrusiveAquaculture = Priority("Nonintrusive Aquaculture", NonintrusiveAquaculture_value)
-PopulationHappiness = Priority("Population Happiness", PopulationHappiness_value)
