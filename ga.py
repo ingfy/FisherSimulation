@@ -224,13 +224,13 @@ class FishermanVotingRules(vote.VotingDecisionMechanism, Phenotype):
     }
         
     def decide_votes(self, agent, coastal_plan, world_map, num_max_complaints):
-        return rule_to_method[self.rule](
+        return self.rule_to_method[self.rule](
             self, agent, coastal_plan, world_map, num_max_complaints
         )
         
     @classmethod
     def new(c, agent, config, world):
-        agemt.add_voting_mechanism(c(FishermanRulesGenotype.random()))
+        agent.add_voting_mechanism(c(FishermanRulesGenotype.random()))
         
 class FishermanRulesGenotype(Genotype):
     length = 3
@@ -239,8 +239,9 @@ class FishermanRulesGenotype(Genotype):
         return {
             0: FishermanVotingRules.DIST_PROB,
             1: FishermanVotingRules.COMPLAIN_10,
-            2: FishermanVotingRules.APPROVE_ALL
-        }[int(self.genome, 2) / 2]
+            2: FishermanVotingRules.APPROVE_ALL,
+            3: FishermanVotingRules.DIST_PROB
+        }[int("".join(self.genome), 2) / 2]
 
             
 class FishermanVotingNN(vote.VotingDecisionMechanism, Phenotype):
