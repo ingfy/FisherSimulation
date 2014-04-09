@@ -1,6 +1,7 @@
-import simulation
+import lib.simulation as simulation
 import sys
-import phases
+import lib.util as util
+import lib.phases as phases
 
 class CommandLineInterface(object):
     def __init__(self):
@@ -60,7 +61,7 @@ class CommandLineInterface(object):
             print result.data
             
             # modify map
-            self.simulation_info.map.grid = update_map(
+            self.simulation_info.map.grid = util.update_map(
                 self.simulation_info.map.grid, result.map.grid
             )
             prev_phase = result.phase
@@ -69,11 +70,6 @@ class CommandLineInterface(object):
         # save log and stuff        
         print "Simulation finished."
         print map_to_string(self.simulation_info.map)
-        
-def update_map(old, updates):
-    return [[old_cell if new_cell is None else new_cell 
-        for (old_cell, new_cell) in zip(*row)] 
-            for row in zip(old, updates)]
 
 map_symbol_explanations = [
     "[L]and",
