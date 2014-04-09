@@ -27,19 +27,19 @@
         "learning mechanism": {
             "class": {
                 "type":     "class",
-                "class":    "lib.ga.Evolution"
+                "class":    "simulation.ga.Evolution"
             },
             "config class": {
                 "type":     "class",
-                "class":    "lib.ga.EvolutionConfig"
+                "class":    "simulation.ga.EvolutionConfig"
             },
             "phenotype class": {
                 "type":     "class",
-                "class":    "lib.ga.FishermanVotingRules"
+                "class":    "simulation.ga.FishermanVotingRules"
             },
             "genotype class": {
                 "type":     "class",
-                "class":    "lib.ga.FishermanRulesGenotype"
+                "class":    "simulation.ga.FishermanRulesGenotype"
             },
             "elitism":                       3,
             "selection mechanism":           "rank selection",
@@ -50,7 +50,7 @@
         },
         "voting mechanism class": {
             "type": "class",
-            "class": "lib.ga.FishermanVotingRules"
+            "class": "simulation.ga.FishermanVotingRules"
         }
     },
     "aquaculture": {
@@ -62,7 +62,7 @@
         },
         "voting mechanism class": {
             "type":     "class",
-            "class":    "lib.vote.AlwaysApprove"
+            "class":    "simulation.vote.AlwaysApprove"
         }
     },
     "civilian": {
@@ -75,7 +75,7 @@
         },
         "voting mechanism class":           {
             "type": "class",
-            "class": "lib.vote.AlwaysApprove"
+            "class": "simulation.vote.AlwaysApprove"
         }
     },
     "tourist": {
@@ -87,7 +87,7 @@
         },
         "voting mechanism class":           {
             "type": "class",
-            "class": "lib.vote.AlwaysApprove"
+            "class": "simulation.vote.AlwaysApprove"
         }
     },
     "government": {

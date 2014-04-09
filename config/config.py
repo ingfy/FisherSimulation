@@ -1,5 +1,5 @@
 import json
-import lib.priority as priority
+import simulation.priority as priority
 import inspect
 import sys
 import importlib

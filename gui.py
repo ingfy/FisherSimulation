@@ -1,8 +1,8 @@
 import wx
 import gui.worldmap as worldmap
-import lib.do as do
-import lib.simulation as simulation
-import lib.util as util
+import simulation.do as do
+import simulation.simulation as simulation
+import simulation.util as util
 import time
 
 class Backend():

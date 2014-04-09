@@ -1,7 +1,7 @@
-import lib.simulation as simulation
+import simulation.simulation as simulation
 import sys
-import lib.util as util
-import lib.phases as phases
+import simulation.util as util
+import simulation.phases as phases
 
 class CommandLineInterface(object):
     def __init__(self):
