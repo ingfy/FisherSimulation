@@ -1,4 +1,4 @@
-import config.config as config
+from config import config
 import entities
 import world 
 import sys

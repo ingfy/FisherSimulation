@@ -162,6 +162,7 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
     def coastal_planning(self, world_map, complaints=None):
         self.create_plan(world_map, complaints)
         self.distribute_plan()
+        return self._plan
         
     def create_plan(self, world_map, complaints=None):
         if self._plan is None:

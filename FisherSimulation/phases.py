@@ -59,20 +59,22 @@ class Round(object):
         return self._round_counter
         
 class StepResult(object):
-    def __init__(self, phase, messages_sent, cells_changed, world_map, data):
+    def __init__(self, phase, messages_sent, cells_changed, world_map, data,
+            round_number):
         self.phase = phase
         self.messages_sent = messages_sent
         self.cells_changed = cells_changed
         self.world_map = world_map
         self.data = data
+        self.round_number = round_number
         
     @classmethod
-    def cells_changed(c, phase, cells_changed, world_map, data):
-        return c(phase, [], cells_changed, world_map, data)
+    def cells_changed(c, phase, cells_changed, world_map, data, round):
+        return c(phase, [], cells_changed, world_map, data, round)
         
     @classmethod
-    def no_cells_changed(c, phase, world_map, data):
-        return c(phase, [], [], world_map, data)
+    def no_cells_changed(c, phase, world_map, data, round):
+        return c(phase, [], [], world_map, data, round)
 
 ## Abstract Step classes ##
 
@@ -121,27 +123,43 @@ class DecisionStep(Step):
 
 class CoastalPlanning(Step):
     def do(self, round):
+        data = {"statistics": {}}
+        
         for a in self.info.directory.get_agents():
             self.info.logger.vote_fitness_relation(round, a)
         municipality = self.info.directory.get_municipality()
-        municipality.coastal_planning(
+        plan = municipality.coastal_planning(
             self.info.map,
             self.info.directory.get_government().get_approved_complaints()
         )
-        return StepResult.no_cells_changed(self, self.info.map, {})
+        
+        data["statistics"]["planned aquaculture sites *100"] = {
+            "mode":  "set",
+            "value": len(plan.aquaculture_sites()) / 100.0
+        }
+        
+        return StepResult.no_cells_changed(self, self.info.map, data, round)
     
 class Hearing(Step):
     def do(self, round):
-        data_dict = {}
+        data = {"statistics": {}}
         self.info.directory.get_government().new_vote_round()
+        votes = {}
         for agent in self.info.directory.get_voting_agents():
-            votes = agent.hearing(
+            votes[agent] = agent.hearing(
                 self.info.map, 
                 self.info.cfg['global']['num_max_complaints']
             )
             self.info.logger.add_vote(round, agent, 
-                len([v for v in votes if v.is_complaint()]))
-        return StepResult.no_cells_changed(self, self.info.map, data_dict)
+                len([v for v in votes[agent] if v.is_complaint()]))
+        data["statistics"]["average number of complaints * 3"] = {
+            "mode": "add",
+            "value": numpy.mean(
+                [len([v for v in votes[a] if v.is_complaint()]) for a in votes]
+            ) / 3.0
+        }
+        return StepResult.no_cells_changed(self, self.info.map, data, 
+            round)
         
 class GovernmentDecision(DecisionStep):
    def do(self, round):
@@ -150,11 +168,14 @@ class GovernmentDecision(DecisionStep):
             self.info.cfg["global"]["max_hearing_rounds"]
         )
         return (
-            StepResult.no_cells_changed(self, self.info.map, {}), decision
+            StepResult.no_cells_changed(self, self.info.map, {}, round), 
+            decision
         )
 
 class Fishing(Step):
     def do(self, round):
+        data = {"statistics": {}}
+    
         # Agents do profit activities
         government = self.info.directory.get_government()
         
@@ -175,15 +196,32 @@ class Fishing(Step):
         for a in working_agents: 
             a.work()
         
+        agent_type_labels = [
+            (entities.Fisherman, "fisherman")
+        ]
+        
+        for t, l in agent_type_labels:
+            agents = self.info.directory.get_agents(type = t)
+            if len(agents) > 0:
+                data["statistics"]["average %s capital" % l] = {
+                    "value":
+                        numpy.mean(
+                            [a.capital for a in agents]
+                        )
+                }
+            
+        
         # (Local) Aquaculture companies pay some of their revenue to locals
         # through taxation
         for a in self.info.directory.get_agents(type = entities.Aquaculture):
             a.pay_taxes()
         
-        return StepResult.cells_changed(self, affected_cells, self.info.map, {})
+        return StepResult.cells_changed(self, affected_cells, self.info.map, 
+            data, round)
         
 class Building(Step):
     def do(self, round):
+        data = {"statistics": {}}
         government = self.info.directory.get_government()
         municipality = self.info.directory.get_municipality()
         licenses = government.distribute_licenses()
@@ -203,11 +241,17 @@ class Building(Step):
                     agent, 
                     location
                 ))
-        return StepResult.cells_changed(self, affected_cells, self.info.map, {})
+        data["statistics"]["number of aquacultures *10"] = {
+            "value": len(
+                self.info.directory.get_agents(type = entities.Aquaculture)
+            ) / 10.0
+        }
+        return StepResult.cells_changed(self, affected_cells, self.info.map, 
+            data, round)
         
 class Learning(Step):
     def do(self, round):
-        data_dict = {"average fitness": {}}
+        data_dict = {"average fitness": {}, "statistics": {}}
         
         dir = self.info.directory
         all_agents = dir.get_agents()
@@ -235,6 +279,14 @@ class Learning(Step):
                 [fitnesses[a] for a in fitnesses if a.__class__ == t]
             )
             
+        # average of all fitnesses
+        for t, l in [(entities.Fisherman, "fisherman")]:
+            data_dict["statistics"]["average %s fitness" % l] = {
+                "value": numpy.mean(
+                    [fitnesses[a] for a in fitnesses if a.__class__ == t]
+                )
+            }
+            
         # log fitness
         for agent in fitnesses:
             self.info.logger.add_fitness(round, agent, fitnesses[agent])
@@ -242,4 +294,5 @@ class Learning(Step):
         for group in self.info.learning_mechanisms:
             self.info.learning_mechanisms[group].learn(fitnesses)
         
-        return StepResult.no_cells_changed(self, self.info.map, data_dict)
+        return StepResult.no_cells_changed(self, self.info.map, data_dict, 
+            round)

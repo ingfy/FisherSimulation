@@ -10,20 +10,10 @@ class WorldMap(BufferedCanvas):
         self.SetBackgroundColour("white")
         
         self.BufferBmp = None
-        self.timer = None
         self.update()
         
-    def start(self, backend):
-        self.backend = backend
-        self._data = None
-        self.timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.OnUpdate)
-        self.timer.Start(milliseconds=500, oneShot=False)        
-        
-    # Event methods    
-    def OnUpdate(self, event):        
-        self._data = { "map": self.backend.get_map() }
-        self.update()
+    def set_map(self, map):
+        self._data = {"map": map}
         
     def draw(self, dc):
         dc.Clear()
@@ -45,8 +35,7 @@ class WorldMap(BufferedCanvas):
             
             ## Vertical lines
             for y in xrange(num_ver + 1):
-                dc.DrawLine(0, cell_h * y, w, cell_h * y) 
-            
+                dc.DrawLine(0, cell_h * y, w, cell_h * y)             
             
             fish_color = wx.Colour(0, 0, 255)
             fish_pen = wx.Pen(fish_color, 1)
@@ -91,12 +80,7 @@ class WorldMap(BufferedCanvas):
             return True
             
         except Exception, e:
-            print e
             return False
-        
-    def stop_timer(self):
-        if not self.timer is None:
-            self.timer.Stop()
             
 def draw_blocked(dc, x, y, cell_w, cell_h, color):
     dc.SetPen(wx.Pen(color, 2))

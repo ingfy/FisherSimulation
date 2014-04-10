@@ -6,8 +6,8 @@
     "world": {
         "structure": {
             "type": "grid",
-            "width": 25,
-            "height": 25,
+            "width": 15,
+            "height": 15,
             "good_spot_frequency": 0.1,
             "cell_width": 25,
             "cell_height": 25,
@@ -15,7 +15,7 @@
         }        
     },
     "fisherman": {
-        "num": 25,
+        "num": 20,
         "priorities": {
             "OwnProfits":                    10.0,
             "CommunityWealth":               2.0,
@@ -27,19 +27,19 @@
         "learning mechanism": {
             "class": {
                 "type":     "class",
-                "class":    "simulation.ga.Evolution"
+                "class":    "FisherSimulation.ga.Evolution"
             },
             "config class": {
                 "type":     "class",
-                "class":    "simulation.ga.EvolutionConfig"
+                "class":    "FisherSimulation.ga.EvolutionConfig"
             },
             "phenotype class": {
                 "type":     "class",
-                "class":    "simulation.ga.FishermanVotingRules"
+                "class":    "FisherSimulation.ga.FishermanVotingNN"
             },
             "genotype class": {
                 "type":     "class",
-                "class":    "simulation.ga.FishermanRulesGenotype"
+                "class":    "FisherSimulation.ga.FishermanNNGenotype"
             },
             "elitism":                       3,
             "selection mechanism":           "rank selection",
@@ -50,7 +50,7 @@
         },
         "voting mechanism class": {
             "type": "class",
-            "class": "simulation.ga.FishermanVotingRules"
+            "class": "FisherSimulation.ga.FishermanVotingNN"
         }
     },
     "aquaculture": {
@@ -62,7 +62,7 @@
         },
         "voting mechanism class": {
             "type":     "class",
-            "class":    "simulation.vote.AlwaysApprove"
+            "class":    "FisherSimulation.vote.AlwaysApprove"
         }
     },
     "civilian": {
@@ -75,7 +75,7 @@
         },
         "voting mechanism class":           {
             "type": "class",
-            "class": "simulation.vote.AlwaysApprove"
+            "class": "FisherSimulation.vote.AlwaysApprove"
         }
     },
     "tourist": {
@@ -87,7 +87,7 @@
         },
         "voting mechanism class":           {
             "type": "class",
-            "class": "simulation.vote.AlwaysApprove"
+            "class": "FisherSimulation.vote.AlwaysApprove"
         }
     },
     "government": {

@@ -1,5 +1,5 @@
 import json
-import simulation.priority as priority
+from FisherSimulation import priority
 import inspect
 import sys
 import importlib
