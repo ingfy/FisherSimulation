@@ -146,10 +146,12 @@ class Message(object):
     def __str__(self):
         recipient_line = ("Recipient: %s" % self.recipient) if \
             self.type == "single" else \
-            ("Recipients:%s" % util.smart_line_sep(
-                self.recipients, ", ", 70, "\n" + " "*12))
+            ("Recipients:%s" % 
+                (util.smart_line_sep(self.recipients[:4], 
+                    ", ", 70, "\n" + " "*12) + 
+                    ("..." if len(self.recipients) > 4 else "")))
         return "Message:\n\t" + '\n\t'.join([
-            "Type: %s"      % self.type     ,            
+            "Type: %s"      % self.type     ,
             "Sender: %s"    % self.sender   ,
             recipient_line                  ,
             "Time: %d"      % self.timestamp,
@@ -182,10 +184,12 @@ class PhaseReport(object):
         new_round:  Boolean
         data:       A field where non-standard component data can be sent.
                     Used through the phases module.
+        next_phasE: String
+        round:      Integer representing the number of the current round
     """
     
     @classmethod
-    def from_step_result(c, result):
+    def from_step_result(c, result, next):
         obj = c()
         obj.phase = result.phase.name
         obj.messages = [Message.from_message(result.world_map, m) 
@@ -193,4 +197,6 @@ class PhaseReport(object):
         obj.map = Map.from_world_map(
             result.world_map, cells=result.cells_changed)
         obj.data = result.data
+        obj.next_phase = next
+        obj.round = result.round_number
         return obj

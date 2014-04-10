@@ -1,10 +1,10 @@
 import json
-import priority
+from FisherSimulation import priority
 import inspect
 import sys
 import importlib
 
-cfg_json_filename = 'config.js'
+cfg_json_filename = 'config/config.js'
 agent_types = ['fisherman', 'aquaculture', 'tourist', 'government', 
     'municipality', 'civilian']
 voting_agents = ['fisherman', 'aquaculture', 'tourist', 'civilian']

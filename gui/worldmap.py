@@ -10,20 +10,10 @@ class WorldMap(BufferedCanvas):
         self.SetBackgroundColour("white")
         
         self.BufferBmp = None
-        self.timer = None
         self.update()
         
-    def start(self, backend):
-        self.backend = backend
-        self._data = None
-        self.timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.OnUpdate)
-        self.timer.Start(milliseconds=500, oneShot=False)        
-        
-    # Event methods    
-    def OnUpdate(self, event):        
-        self._data = { "map": self.backend.get_map() }
-        self.update()
+    def set_map(self, map):
+        self._data = {"map": map}
         
     def draw(self, dc):
         dc.Clear()
@@ -45,8 +35,7 @@ class WorldMap(BufferedCanvas):
             
             ## Vertical lines
             for y in xrange(num_ver + 1):
-                dc.DrawLine(0, cell_h * y, w, cell_h * y) 
-            
+                dc.DrawLine(0, cell_h * y, w, cell_h * y)             
             
             fish_color = wx.Colour(0, 0, 255)
             fish_pen = wx.Pen(fish_color, 1)
@@ -65,28 +54,38 @@ class WorldMap(BufferedCanvas):
             land_len = wx.Pen(land_color, 1)
             land_brush = wx.Brush(land_color, wx.SOLID)
             
+            blocked_color = wx.Colour(255, 0, 0)
+            
             # Draw entities
             for i in xrange(num_hor):
                 for j in xrange(num_ver):
                     x, y = (cell_w * i, cell_h * j)
                     if map.grid[i][j].spawning: 
-                        draw_fish_top_left(dc, x, y, cell_w, cell_h, fish_pen, fish_brush)
+                        draw_fish_top_left(dc, x, y, cell_w, cell_h, fish_pen, 
+                            fish_brush)
+                    if map.grid[i][j].blocked:
+                        draw_blocked(dc, x, y, cell_w, cell_h, blocked_color)
                     if map.grid[i][j].fisherman:
-                        draw_boat_bottom_right(dc, x, y, cell_w, cell_h, boat_pen, boat_brush)
+                        draw_boat_bottom_right(dc, x, y, cell_w, cell_h, 
+                            boat_pen, boat_brush, map.grid[i][j].num_fishermen)
                     if map.grid[i][j].aquaculture:
-                        draw_aquaculture_center(dc, x + cell_w / 2, y + cell_h / 2, cell_w, cell_h, aquaculture_pen, aquaculture_brush)
+                        draw_aquaculture_center(dc, x + cell_w / 2, 
+                            y + cell_h / 2, cell_w, cell_h, aquaculture_pen, 
+                            aquaculture_brush)
                     if map.grid[i][j].land:
-                        draw_land(dc, x, y, cell_w, cell_h, land_pen, land_brush)            
+                        draw_land(dc, x, y, cell_w, cell_h, land_pen, 
+                            land_brush)                    
+                            
             
             return True
             
         except Exception, e:
-            print e
             return False
-        
-    def stop_timer(self):
-        if not self.timer is None:
-            self.timer.Stop()
+            
+def draw_blocked(dc, x, y, cell_w, cell_h, color):
+    dc.SetPen(wx.Pen(color, 2))
+    dc.DrawLine(x, y, x + cell_w, y + cell_h)
+    dc.DrawLine(x + cell_w, y, x, y + cell_h)
             
 def draw_land(dc, x, y, cell_w, cell_h, p, b):
     dc.SetPen(p)
@@ -105,7 +104,7 @@ def draw_aquaculture_center(dc, x, y, cell_w, cell_h, p, b):
     dc.DrawPolygon(points)
             
           
-def draw_boat_center(dc, x, y, cell_w, cell_h, p, b):
+def draw_boat_center(dc, x, y, cell_w, cell_h, p, b, num):
     scale = min(cell_w, cell_h)
     dc.SetPen(p)
     dc.SetBrush(b)
@@ -117,12 +116,24 @@ def draw_boat_center(dc, x, y, cell_w, cell_h, p, b):
                     wx.Point(x,              y - scale / 8 - scale / 4)])
     # Draw mast
     dc.DrawLine(x, y, x, y - scale / 8)
-                    
-def draw_boat_bottom_right(dc, x, y , cell_w, cell_h, p, b):
+    
+    if num > 1:
+        dc.SetFont(wx.Font(
+            pointSize=scale/3,
+            family=wx.FONTFAMILY_DEFAULT,
+            style=wx.FONTSTYLE_NORMAL,
+            weight=wx.FONTWEIGHT_BOLD))
+        dc.SetTextForeground(wx.Colour(255, 255, 125))
+        text = str(num)
+        tw, th = dc.GetTextExtent(text)
+        dc.DrawText(text, (x - tw / 2),
+                          (y + scale / 6 - th / 2))
+
+def draw_boat_bottom_right(dc, x, y , cell_w, cell_h, p, b, num):
     scale = min(cell_w, cell_h)
     ox = cell_w - scale / 3
     oy = cell_h - scale / 8 - cell_h / 4
-    draw_boat_center(dc, ox + x, oy + y, cell_w, cell_h, p, b)
+    draw_boat_center(dc, ox + x, oy + y, cell_w, cell_h, p, b, num)
             
 def draw_fish_center(dc, x, y, cell_w, cell_h, p, b):
     scale = min(cell_w, cell_h)

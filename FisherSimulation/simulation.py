@@ -1,4 +1,4 @@
-import config
+from config import config
 import entities
 import world 
 import sys
@@ -129,7 +129,8 @@ class Simulation(object):
     
     def step(self):
         result = self._round.next()
-        report = do.PhaseReport.from_step_result(result)
+        report = do.PhaseReport.from_step_result(result, 
+            self.get_current_phase())
         #print '\n'.join([str(m) for m in report.messages])
         return report
     
