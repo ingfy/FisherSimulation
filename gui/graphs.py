@@ -17,9 +17,7 @@ class Graphs(BufferedCanvas):
     ]
 
     def __init__(self, parent, size):
-        self._data = {}
-        self._assigned_colors = {}
-        self._colors_iter = iter(Graphs.graph_colors)
+        self.reset_data()
         
         BufferedCanvas.__init__(self, parent, size=size)        
         self.SetBackgroundColour("white")
@@ -28,6 +26,11 @@ class Graphs(BufferedCanvas):
         
         
         self.update()
+        
+    def reset_data(self):
+        self._data = {}
+        self._assigned_colors = {}
+        self._colors_iter = iter(Graphs.graph_colors)
         
     def add_data_point(self, label, round, value, mode="add"):
         if not label in self._data:

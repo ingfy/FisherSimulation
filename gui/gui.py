@@ -235,7 +235,8 @@ class Window(wx.Frame):
     
     def reset_gui(self):
         self.controls.reset_buttons()
-        self.messages.clear()    
+        self.messages.clear()
+        self.graphs.reset_data()
         
     # Event Methods
     def OnStart(self, event):
@@ -244,7 +245,7 @@ class Window(wx.Frame):
         self._simulation = simulation.Simulation()
         
         self._simulation.setup_config()
-        self.simulation_info = self._simulation.initialize() 
+        self.simulation_info = self._simulation.initialize()
         
         self.rounds = 0
         self.steps = 0
@@ -294,6 +295,9 @@ class Window(wx.Frame):
         
     def OnStop(self, event):
         self.reset_gui()
+        self._simulation = None
+        self.simulation_info = None
+        
             
     def OnClose(self, event):
         self.Destroy()

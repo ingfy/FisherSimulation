@@ -1,7 +1,7 @@
-import simulation.simulation as simulation
+from FisherSimulation import simulation
 import sys
-import simulation.util as util
-import simulation.phases as phases
+from FisherSimulation import util
+from FisherSimulation import phases
 
 class CommandLineInterface(object):
     def __init__(self):
