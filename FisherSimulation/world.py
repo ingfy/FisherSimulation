@@ -71,6 +71,7 @@ class Slot(object):
         self._spawning = False
         self._blocked = False
         self._land = False
+        self._has_aquaculture = False
         self._fish_quantity = 0.5
 
     def get_occupants(self):
@@ -81,6 +82,13 @@ class Slot(object):
         
     def is_land(self):
         return self._land
+        
+    def has_aquaculture(self):
+        """Checks if the cell has aquaculture built on it.
+        
+        Returns: True or False.
+        """
+        return self._has_aquaculture
         
     def set_land(self):
         self._land = True
@@ -128,6 +136,7 @@ class Slot(object):
             self._occupants.remove(agent)
 
     def build_aquaculture(self, agent):
+        self._has_aquaculture = True
         self._occupants = [agent]
         self._blocked = True
         

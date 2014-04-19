@@ -147,7 +147,7 @@ class Graphs(BufferedCanvas):
                     -int(values[i] * scale_y)
                 ) for i in xrange(len(selected_rounds)) if i in values]
                 dc.SetPen(wx.Pen(self._assigned_colors[label], 2))
-                dc.DrawLines(points, xoffset=graph_x, yoffset=graph_x+graph_h)
+                dc.DrawLines(points, xoffset=graph_x, yoffset=graph_y+graph_h)
                 
             # Draw explanations
             num_expl = len(data)

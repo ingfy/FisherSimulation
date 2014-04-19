@@ -60,21 +60,26 @@ class Round(object):
         
 class StepResult(object):
     def __init__(self, phase, messages_sent, cells_changed, world_map, data,
-            round_number):
+            round_number, votes):
         self.phase = phase
         self.messages_sent = messages_sent
         self.cells_changed = cells_changed
         self.world_map = world_map
         self.data = data
         self.round_number = round_number
+        self.votes = votes
         
     @classmethod
     def cells_changed(c, phase, cells_changed, world_map, data, round):
-        return c(phase, [], cells_changed, world_map, data, round)
+        return c(phase, [], cells_changed, world_map, data, round, {})
         
     @classmethod
     def no_cells_changed(c, phase, world_map, data, round):
-        return c(phase, [], [], world_map, data, round)
+        return c(phase, [], [], world_map, data, round, {})
+        
+    @classmethod
+    def votes_cast(c, phase, world_map, data, round, votes):
+        return c(phase, [], [], world_map, data, round, votes)
 
 ## Abstract Step classes ##
 
@@ -158,8 +163,8 @@ class Hearing(Step):
                 [len([v for v in votes[a] if v.is_complaint()]) for a in votes]
             ) / 3.0
         }
-        return StepResult.no_cells_changed(self, self.info.map, data, 
-            round)
+        return StepResult.votes_cast(self, self.info.map, data, 
+            round, votes)
         
 class GovernmentDecision(DecisionStep):
    def do(self, round):

@@ -1,5 +1,6 @@
 import wx
 from wx.lib import intctrl
+from wx.lib.splitter import MultiSplitterWindow
 import worldmap
 import Queue
 import graphs
@@ -42,12 +43,14 @@ def EVT_RESULT(win, func):
     win.Connect(-1, -1, EVT_RESULT_ID, func)
         
 class Controls(wx.Panel):
-    def __init__(self, parent, size):
+    def __init__(self, parent, size, listener):
         wx.Panel.__init__(self, parent, size=size)
+        
+        self.listener = listener
 
         ##  Start button
         self.startButton = wx.Button(self, id=ID_START, label="&Initialize")
-        self.Bind(wx.EVT_BUTTON, self.GetParent().OnStart, self.startButton)
+        self.Bind(wx.EVT_BUTTON, self.listener.OnStart, self.startButton)
         
         ## Run rounds, steps inputs
         self.rounds_input = intctrl.IntCtrl(self, pos=(10, 60), size=(20, -1),
@@ -63,7 +66,7 @@ class Controls(wx.Panel):
         ##  Stop button
         self.stopButton = wx.Button(self, id=ID_STOP, pos=(0, 120), 
             label="S&top")
-        self.Bind(wx.EVT_BUTTON, self.GetParent().OnStop, self.stopButton)
+        self.Bind(wx.EVT_BUTTON, self.listener.OnStop, self.stopButton)
         
         self.reset_buttons()
         
@@ -74,7 +77,7 @@ class Controls(wx.Panel):
     def OnRun(self, event):
         rounds = self.rounds_input.GetValue()
         steps = self.steps_input.GetValue()
-        self.GetParent().run(rounds, steps)
+        self.listener.run(rounds, steps)
         
     # Helper methods
     def set_buttons_processing(self):
@@ -172,9 +175,20 @@ class Messages(wx.Panel):
         
         self.SetSizerAndFit(self.sizer)
         
+        self.activate()
+        
+    def activate(self):
+        self.active = True
+        self.textbox.Enable()
+        
+    def deactivate(self):
+        self.active = False
+        self.textbox.Disable()
+        
     def add(self, message):
-        self.textbox.AppendText("\n" + message)
-        self.textbox.ShowPosition(self.textbox.GetLastPosition())
+        if self.active:
+            self.textbox.AppendText("\n" + message)
+            self.textbox.ShowPosition(self.textbox.GetLastPosition())
         
     def clear(self):
         self.textbox.Clear()
@@ -183,22 +197,36 @@ class Window(wx.Frame):
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, title=title)
         
+        # Splitters and Panels
+        self.controls_map_splitter = wx.SplitterWindow(self)
+        self.controls_map_splitter.SetMinimumPaneSize(300)
+        
+        controls_panel = wx.Panel(self.controls_map_splitter)
+        map_panel = wx.Panel(self.controls_map_splitter)
+        
+        self.graphs_messages_splitter = wx.SplitterWindow(controls_panel)
+        self.graphs_messages_splitter.SetMinimumPaneSize(50)        
+        
+        graphs_panel = wx.Panel(self.graphs_messages_splitter)
+        messages_panel = wx.Panel(self.graphs_messages_splitter)        
+        
         # World graphic
-        self._graphics = worldmap.WorldMap(self)
+        self._graphics = worldmap.WorldMap(map_panel)
         self.graphics_sizer = wx.BoxSizer(wx.VERTICAL)
         self.graphics_sizer.Add(self._graphics, 1, wx.EXPAND)
+        map_panel.SetSizerAndFit(self.graphics_sizer)
         
         # Controls panel
-        self.controls = Controls(self, (300, 250))
+        self.controls = Controls(controls_panel, (300, 250), self)
         
         # Info panel
-        self.info = Info(self, (300, 250))
+        self.info = Info(controls_panel, (300, 250))
         
         # Graph canvas
-        self.graphs = graphs.Graphs(self, (300, 300))
+        self.graphs = graphs.Graphs(graphs_panel, (300, 300))
                 
         # Messages panel
-        self.messages = Messages(self, (600, 200))
+        self.messages = Messages(messages_panel, (600, 200))
         
         self.interface_sizer = wx.BoxSizer(wx.VERTICAL)
         
@@ -206,23 +234,31 @@ class Window(wx.Frame):
         self.controls_info_sizer.Add(self.info, 0, wx.EXPAND)
         self.controls_info_sizer.Add(self.controls, 1, wx.EXPAND)
         
-        self.messages_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.messages_sizer = wx.BoxSizer(wx.VERTICAL)
         self.messages_sizer.Add(self.messages, 1, wx.EXPAND)
+        messages_panel.SetSizer(self.messages_sizer)
         
         self.graphs_sizer = wx.BoxSizer(wx.VERTICAL)
         self.graphs_sizer.Add(self.graphs, 1, wx.EXPAND)
+        graphs_panel.SetSizer(self.graphs_sizer)
         
         self.interface_sizer.Add(self.controls_info_sizer, 0, wx.EXPAND)
-        self.interface_sizer.Add(self.messages_sizer, 1, wx.EXPAND)
-        self.interface_sizer.Add(self.graphs_sizer, 1, wx.EXPAND)
+        self.interface_sizer.Add(self.graphs_messages_splitter, 1, wx.EXPAND)
         
-        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer.Add(self.interface_sizer, 0, wx.EXPAND)
-        self.sizer.Add(self.graphics_sizer, 1, wx.EXPAND)       
+        controls_panel.SetSizerAndFit(self.interface_sizer)
+        
+        self.graphs_messages_splitter.SplitHorizontally(messages_panel, 
+            graphs_panel)
+            
+        self.controls_map_splitter.SplitVertically(controls_panel, map_panel)
+        
+        #self.sizer = wx.BoxSizer(wx.HORIZONTAL)
+        #self.sizer.Add(self.interface_sizer, 0, wx.EXPAND)
+        #self.sizer.Add(self.graphics_sizer, 1, wx.EXPAND)       
         
                 
         # Layout sizers
-        self.SetSizerAndFit(self.sizer)
+        #self.SetSizerAndFit(self.sizer)
         
         # Set up event handler for any worker thread results
         EVT_RESULT(self, self.OnResult)
@@ -246,6 +282,12 @@ class Window(wx.Frame):
         
         self._simulation.setup_config()
         self.simulation_info = self._simulation.initialize()
+        
+        if not self.simulation_info.interface_config.print_messages:
+            self.messages.deactivate()
+
+        self._graphics.num_max_complaints = \
+            self.simulation_info.num_max_complaints
         
         self.rounds = 0
         self.steps = 0
@@ -277,6 +319,8 @@ class Window(wx.Frame):
 
         handle_statistics(self.graphs, event.result.round, event.result.data)
         self._graphics.set_map(self.simulation_info.map)
+        if event.result.phase == "HEARING":
+            self._graphics.add_votes(event.result.complaints)
         self._graphics.update()
         
         for m in event.result.messages:

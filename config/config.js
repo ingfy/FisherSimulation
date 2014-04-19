@@ -14,6 +14,9 @@
             "aquaculture blocking radius": 25
         }        
     },
+    "interface": {
+        "print messages":                   "False"
+    },
     "fisherman": {
         "num": 20,
         "priorities": {
