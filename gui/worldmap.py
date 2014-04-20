@@ -25,10 +25,12 @@ class WorldMap(BufferedCanvas):
     def set_map(self, map):
         self._data = {"map": map}
         
+    def reset_votes(self):
+        self._agent_colors = {}
+        self._complaints = []      
         
     def add_votes(self, complaints):
         self._complaints = complaints
-        self._agent_colors = {}
         votes_by_agent = {}
         for v in self._complaints:
             if not v.agent_id in votes_by_agent:

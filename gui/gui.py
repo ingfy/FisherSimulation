@@ -1,4 +1,5 @@
 import wx
+import os
 from wx.lib import intctrl
 from wx.lib.splitter import MultiSplitterWindow
 import worldmap
@@ -10,6 +11,8 @@ from FisherSimulation import util
 from BufferedCanvas import BufferedCanvas
 import time
 import threading
+
+DEFAULT_CONFIG_FILENAME = "config/config.js"
 
 class PhaseResultEvent(wx.PyEvent):
     def __init__(self, result):
@@ -48,8 +51,15 @@ class Controls(wx.Panel):
         
         self.listener = listener
 
+        ## Config input
+        wx.StaticText(self, -1, "Config:", pos=(0, 0))
+        self.configFilename = wx.FilePickerCtrl(self, 
+            path=os.path.abspath(DEFAULT_CONFIG_FILENAME), pos=(60, 0), 
+            size=(200, -1))
+        
         ##  Start button
-        self.startButton = wx.Button(self, id=ID_START, label="&Initialize")
+        self.startButton = wx.Button(self, id=ID_START, pos=(0, 30), 
+            label="&Initialize")
         self.Bind(wx.EVT_BUTTON, self.listener.OnStart, self.startButton)
         
         ## Run rounds, steps inputs
@@ -69,6 +79,9 @@ class Controls(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.listener.OnStop, self.stopButton)
         
         self.reset_buttons()
+        
+    def get_config_filename(self):
+        return self.configFilename.GetPath()
         
     def set_status(self, rounds, steps):
         self.rounds_input.SetValue(rounds)
@@ -280,7 +293,7 @@ class Window(wx.Frame):
         
         self._simulation = simulation.Simulation()
         
-        self._simulation.setup_config()
+        self._simulation.setup_config(self.controls.get_config_filename())
         self.simulation_info = self._simulation.initialize()
         
         if not self.simulation_info.interface_config.print_messages:
@@ -327,6 +340,8 @@ class Window(wx.Frame):
             self.messages.add(str(m))
         
         newr = self.prev_phase == "LEARNING" and self.next_phase == "COASTPLAN"
+        if newr:
+            self._graphics.reset_votes()
         if newr and self.rounds > 0:
             self.rounds -= 1
         elif self.rounds == 0:

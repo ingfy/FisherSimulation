@@ -178,7 +178,7 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
             self._plan = plan.CoastalPlan({
                 c: plan.AQUACULTURE_SITE
                     for c in world_map.get_all_cells()
-                        if not c.is_blocked()
+                        if not c.has_aquaculture()
             })
         
         # Convert all cells that have approved complaints to
