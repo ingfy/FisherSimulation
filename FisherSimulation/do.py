@@ -13,6 +13,43 @@ import entities
 ## Are *Pickable* for multiprocessing
 ## Contains minimal logic
 
+class Complaint(object):
+    """An object representing a single complaint.
+    
+    Attributes:
+        coordinates:    A 2-tuple of integers
+        agent_id:       The unique identifier of the agent complaining
+    """
+    
+    @classmethod
+    def create(c, agent, world, vote):
+        """Factory method for creating direct Complaint objects.
+        
+        Parameters:
+            agent: The agent.IdentifyingAgent who cast the vote
+            world: A world.Map instance
+            vote:  A vote.Vote instance
+        """
+        obj = c()
+        obj.coordinates = world.get_structure().get_cell_position(vote.cell)
+        obj.agent_id = agent.get_id()
+        return obj
+
+class InterfaceConfig(object):
+    """Configuration information for the simulation run that the interface
+       needs to know about.
+       
+    Attributes:
+        print_messages:     Boolean
+    """
+    
+    @classmethod
+    def from_dictionary(c, d):
+        def parse_bool(s): return s == "True"
+        obj = c()
+        obj.print_messages = parse_bool(d["print messages"])
+        return obj
+
 class Simulation(object):
     """Complete information about the simulation.
     
@@ -22,46 +59,39 @@ class Simulation(object):
         aquaculture_agents: A list of aquaculture agent objects
         civilians:          A list of civilians
         tourists:           A list of tourists
+        interface_config:   An InterfaceConfig instance
+        num_max_complaints: Integer
     """
-    
-    def __init__(self, map, fishermen, aquaculture_agents, civilians, tourists):
-        self.map = map
-        self.fishermen = fishermen
-        self.aquaculture_agents = aquaculture_agents
-        self.civilians = civilians
-        self.tourists = tourists
         
     @classmethod
-    def from_simulation_info(c, info):
-        fishermen = info.directory.get_agents(type = entities.Fisherman)
-        aquacultures = info.directory.get_agents(type = entities.Aquaculture)
-        civilians = info.directory.get_agents(type = entities.Civilian)
-        tourists = info.directory.get_agents(type = entities.Tourist)
-        return c(
-            Map.from_world_map(info.map),
-            [Fisherman.from_object(f) for f in fishermen],
-            [Aquaculture.from_object(a) for a in aquacultures],
-            [Civilian.from_object(c) for c in civilians],
-            [Tourist.from_object(t) for t in tourists]
-        )
+    def from_simulation_info(c, info, cfg):
+        def to_dos(type, transform):
+            return map(transform, info.directory.get_agents(type = type))
+        obj = c()
+        obj.map = Map.from_world_map(info.map)
+        obj.fishermen = to_dos(entities.Fisherman, Fisherman.from_object)
+        obj.aquacultures = to_dos(entities.Aquaculture, Aquaculture.from_object)
+        obj.civilians = to_dos(entities.Civilian, Civilian.from_object)
+        obj.tourists = to_dos(entities.Tourist, Tourist.from_object)
+        obj.interface_config = InterfaceConfig.from_dictionary(cfg["interface"])
+        obj.num_max_complaints = (cfg["global"]["num_max_complaints"] or 1) * \
+            (cfg["global"]["max_hearing_rounds"] or 1)
+        return obj
         
 class WorkingAgent(object):
     """Working agents have names and capital.
     
     Attributes:
-        name:       Unique identifier string
-        capital:    Float representation of capital
+        id:       Unique identifier string
+        capital:  Float representation of capital
     """
-    def __init__(self, name, capital):
-        self.name = name
-        self.capital = capital
         
     @classmethod
     def from_object(c, object):
-        return c(
-            object.get_id(),
-            object.capital
-        )
+        obj = c()
+        obj.id = object.get_id()
+        obj.capital = object.capital
+        return obj
 
 class Fisherman(WorkingAgent):
     pass
@@ -100,6 +130,7 @@ class Slot(object):
         fisherman       Boolean
         land            Boolean
         blocked         Boolean
+        fishermen       List<Fisherman>
         num_fishermen   Integer
     """
     
@@ -129,6 +160,8 @@ class Slot(object):
             o.__class__ is entities.Fisherman), None) is not None
         obj.land = world_slot.is_land()
         obj.blocked = world_slot.is_blocked()
+        obj.fishermen = [Fisherman.from_object(e) for e in occupants if 
+            e.__class__ == entities.Fisherman]
         obj.num_fishermen = len(occupants) if obj.fisherman else 0
         
         return obj
@@ -179,13 +212,14 @@ class PhaseReport(object):
     """
     Public members:
         phase       String
-        messages    List<String>
+        messages    List<Message>
         map         Map
         new_round:  Boolean
         data:       A field where non-standard component data can be sent.
                     Used through the phases module.
-        next_phasE: String
+        next_phase: String
         round:      Integer representing the number of the current round
+        complaints: List<Complaint>
     """
     
     @classmethod
@@ -198,5 +232,7 @@ class PhaseReport(object):
             result.world_map, cells=result.cells_changed)
         obj.data = result.data
         obj.next_phase = next
+        obj.complaints = [Complaint.create(a, result.world_map, v) for a in 
+            result.votes for v in result.votes[a] if v.is_complaint()]
         obj.round = result.round_number
         return obj

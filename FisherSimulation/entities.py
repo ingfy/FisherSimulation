@@ -58,7 +58,8 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
         self.slot_knowledge = {}
         self.threats = []
         self.decision_mechanism = None
-        self._guess_when_complain = 0.6
+        self._guess_mean = 0.6
+        self._guess_stdev = 0.1
         self._plan_message = None
     
     # Abstract methods
@@ -75,11 +76,14 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
     def plan_hearing_notification(self, message):
         self._plan_message = message
         
+    def estimate_cell_quality(self, cell):
+        return random.gauss(self._guess_mean, self._guess_stdev)
+        
     def vote_response_inform_notification(self, message):
         for v in [c for c in message.reply_to.votes if c.is_complaint()]:
             cell = v.cell
             if not cell in self.slot_knowledge:
-                self.slot_knowledge[cell] = self._guess_when_complain
+                self.slot_knowledge[cell] = self.estimate_cell_quality(cell)
         
     def hearing(self, world_map, num_max_complaints):        
         votes = self.decide_votes(self._plan_message.plan, world_map, 
@@ -174,7 +178,7 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
             self._plan = plan.CoastalPlan({
                 c: plan.AQUACULTURE_SITE
                     for c in world_map.get_all_cells()
-                        if not c.is_blocked()
+                        if not c.has_aquaculture()
             })
         
         # Convert all cells that have approved complaints to

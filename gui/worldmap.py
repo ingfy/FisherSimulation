@@ -2,18 +2,46 @@ import wx
 import math
 from BufferedCanvas import BufferedCanvas
 
+def gradient(min_color, max_color, fraction):
+    return tuple(a + (b - a) * fraction for a, b in zip(min_color, max_color))
+
 class WorldMap(BufferedCanvas):
+    min_vote_color = (0, 128, 0)
+    max_vote_color = (128, 0, 0)
+
     def __init__(self, parent):
         self._size = (600, 600)
         self._data = None
         BufferedCanvas.__init__(self, parent, size = self._size)        
         self.SetBackgroundColour("white")
         
+        self._agent_colors = {}
+        self._complaints = []
+        self.num_max_complaints = 10
+        
         self.BufferBmp = None
         self.update()
         
     def set_map(self, map):
         self._data = {"map": map}
+        
+    def reset_votes(self):
+        self._agent_colors = {}
+        self._complaints = []      
+        
+    def add_votes(self, complaints):
+        self._complaints = complaints
+        votes_by_agent = {}
+        for v in self._complaints:
+            if not v.agent_id in votes_by_agent:
+                votes_by_agent[v.agent_id] = 0
+            votes_by_agent[v.agent_id] += 1
+        for a in votes_by_agent:
+            self._agent_colors[a] = gradient(
+                WorldMap.min_vote_color,
+                WorldMap.max_vote_color,
+                float(votes_by_agent[a]) / self.num_max_complaints
+            )
         
     def draw(self, dc):
         dc.Clear()
@@ -42,8 +70,6 @@ class WorldMap(BufferedCanvas):
             fish_brush = wx.Brush(fish_color, wx.SOLID)
             
             boat_color = wx.Colour(100, 100, 100)
-            boat_pen = wx.Pen(boat_color, 1)
-            boat_brush = wx.Brush(boat_color, wx.SOLID)
             
             aquaculture_border_color = wx.Colour(0, 0, 0)
             aquaculture_fill_color = wx.Colour(200, 200, 200)
@@ -66,15 +92,18 @@ class WorldMap(BufferedCanvas):
                     if map.grid[i][j].blocked:
                         draw_blocked(dc, x, y, cell_w, cell_h, blocked_color)
                     if map.grid[i][j].fisherman:
+                        color = next((self._agent_colors[e.id] for e in 
+                            map.grid[i][j].fishermen if e.id in 
+                            self._agent_colors), WorldMap.min_vote_color)
                         draw_boat_bottom_right(dc, x, y, cell_w, cell_h, 
-                            boat_pen, boat_brush, map.grid[i][j].num_fishermen)
+                            color, map.grid[i][j].num_fishermen)
                     if map.grid[i][j].aquaculture:
                         draw_aquaculture_center(dc, x + cell_w / 2, 
                             y + cell_h / 2, cell_w, cell_h, aquaculture_pen, 
                             aquaculture_brush)
                     if map.grid[i][j].land:
                         draw_land(dc, x, y, cell_w, cell_h, land_pen, 
-                            land_brush)                    
+                            land_brush)
                             
             
             return True
@@ -104,10 +133,10 @@ def draw_aquaculture_center(dc, x, y, cell_w, cell_h, p, b):
     dc.DrawPolygon(points)
             
           
-def draw_boat_center(dc, x, y, cell_w, cell_h, p, b, num):
+def draw_boat_center(dc, x, y, cell_w, cell_h, color, num):
     scale = min(cell_w, cell_h)
-    dc.SetPen(p)
-    dc.SetBrush(b)
+    dc.SetPen(wx.Pen(color, 1))
+    dc.SetBrush(wx.Brush(color, wx.SOLID))
     # Draw boat bottom
     dc.DrawArc(x - scale / 3, y, x + scale / 3, y, x, y)
     # Draw sail
@@ -129,11 +158,11 @@ def draw_boat_center(dc, x, y, cell_w, cell_h, p, b, num):
         dc.DrawText(text, (x - tw / 2),
                           (y + scale / 6 - th / 2))
 
-def draw_boat_bottom_right(dc, x, y , cell_w, cell_h, p, b, num):
+def draw_boat_bottom_right(dc, x, y , cell_w, cell_h, color, num):
     scale = min(cell_w, cell_h)
     ox = cell_w - scale / 3
     oy = cell_h - scale / 8 - cell_h / 4
-    draw_boat_center(dc, ox + x, oy + y, cell_w, cell_h, p, b, num)
+    draw_boat_center(dc, ox + x, oy + y, cell_w, cell_h, color, num)
             
 def draw_fish_center(dc, x, y, cell_w, cell_h, p, b):
     scale = min(cell_w, cell_h)

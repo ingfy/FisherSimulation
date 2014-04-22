@@ -38,11 +38,11 @@
             },
             "phenotype class": {
                 "type":     "class",
-                "class":    "FisherSimulation.ga.FishermanVotingNN"
+                "class":    "FisherSimulation.ga.FishermanVotingRules"
             },
             "genotype class": {
                 "type":     "class",
-                "class":    "FisherSimulation.ga.FishermanNNGenotype"
+                "class":    "FisherSimulation.ga.FishermanRulesGenotype"
             },
             "elitism":                       3,
             "selection mechanism":           "rank selection",
@@ -53,7 +53,7 @@
         },
         "voting mechanism class": {
             "type": "class",
-            "class": "FisherSimulation.ga.FishermanVotingNN"
+            "class": "FisherSimulation.ga.FishermanVotingRules"
         }
     },
     "aquaculture": {

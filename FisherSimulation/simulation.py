@@ -122,7 +122,7 @@ class Simulation(object):
                 
         self._round = phases.Round(info)
         
-        return do.Simulation.from_simulation_info(info)
+        return do.Simulation.from_simulation_info(info, self._cfg)
         
     def get_current_phase(self):
         return self._round.current()
