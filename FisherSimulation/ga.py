@@ -21,8 +21,9 @@ class EvolutionarySelectionPhenotype(object):
         self.fitness = fitness
         
 class Evolution(LearningMechanism):
-    def __init__(self, agents, config):
+    def __init__(self, agents, cfg):
         LearningMechanism.__init__(self, agents)
+        config = EvolutionConfig.from_dict(cfg)
         self._phenotype = config.phenotype
         self._genotype = config.genotype
         self._elitism = config.elitism

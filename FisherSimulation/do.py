@@ -45,9 +45,8 @@ class InterfaceConfig(object):
     
     @classmethod
     def from_dictionary(c, d):
-        def parse_bool(s): return s == "True"
         obj = c()
-        obj.print_messages = parse_bool(d["print messages"])
+        obj.print_messages = d["print messages"]
         return obj
 
 class Simulation(object):
@@ -74,8 +73,8 @@ class Simulation(object):
         obj.civilians = to_dos(entities.Civilian, Civilian.from_object)
         obj.tourists = to_dos(entities.Tourist, Tourist.from_object)
         obj.interface_config = InterfaceConfig.from_dictionary(cfg["interface"])
-        obj.num_max_complaints = (cfg["global"]["num_max_complaints"] or 1) * \
-            (cfg["global"]["max_hearing_rounds"] or 1)
+        obj.num_max_complaints = (cfg["global"]["num max complaints"] or 1) * \
+            (cfg["global"]["max hearing rounds"] or 1)
         return obj
         
 class WorkingAgent(object):

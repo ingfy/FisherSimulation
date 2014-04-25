@@ -1,6 +1,4 @@
 import wx
-import os
-from wx.lib import intctrl
 from wx.lib.splitter import MultiSplitterWindow
 import worldmap
 import Queue
@@ -11,13 +9,19 @@ from FisherSimulation import util
 from BufferedCanvas import BufferedCanvas
 import time
 import threading
-
-DEFAULT_CONFIG_FILENAME = "config/config.js"
+from controls import Controls
 
 class PhaseResultEvent(wx.PyEvent):
-    def __init__(self, result):
+    def __init__(self, source, result):
         wx.PyEvent.__init__(self)
         self.SetEventType(EVT_RESULT_ID)
+        self.source = source
+        self.result = result
+        
+class StopEvent(wx.PyEvent):
+    def __init__(self, result):
+        wx.PyEvent.__init__(self)
+        self.SetEventType(EVT_STOP_ID)
         self.result = result
 
 class WorkerThread(threading.Thread):
@@ -31,89 +35,17 @@ class WorkerThread(threading.Thread):
         
     def run(self):
         result = self._simulation.step()
-        wx.PostEvent(self._notify, PhaseResultEvent(result))
-
-# Button definitions
-ID_START = wx.NewId()
-ID_STEP = wx.NewId()
-ID_RUN = wx.NewId()
-ID_STOP = wx.NewId()
+        wx.PostEvent(self._notify, PhaseResultEvent(self, result))
 
 # Define simulation finished event
 EVT_RESULT_ID = wx.NewId()
+EVT_STOP_ID = wx.NewId()
 
 def EVT_RESULT(win, func):
     win.Connect(-1, -1, EVT_RESULT_ID, func)
-        
-class Controls(wx.Panel):
-    def __init__(self, parent, size, listener):
-        wx.Panel.__init__(self, parent, size=size)
-        
-        self.listener = listener
-
-        ## Config input
-        wx.StaticText(self, -1, "Config:", pos=(0, 0))
-        self.configFilename = wx.FilePickerCtrl(self, 
-            path=os.path.abspath(DEFAULT_CONFIG_FILENAME), pos=(60, 0), 
-            size=(200, -1))
-        
-        ##  Start button
-        self.startButton = wx.Button(self, id=ID_START, pos=(0, 30), 
-            label="&Initialize")
-        self.Bind(wx.EVT_BUTTON, self.listener.OnStart, self.startButton)
-        
-        ## Run rounds, steps inputs
-        self.rounds_input = intctrl.IntCtrl(self, pos=(10, 60), size=(20, -1),
-            value=0, min=0)
-        self.steps_input = intctrl.IntCtrl(self, pos=(40, 60), size=(20, -1),
-            value=1, min=0)
-        
-        ## Run button
-        self.runButton = wx.Button(self, id=ID_RUN, pos=(100, 60), 
-            label = "&Run")
-        self.Bind(wx.EVT_BUTTON, self.OnRun, self.runButton)
-        
-        ##  Stop button
-        self.stopButton = wx.Button(self, id=ID_STOP, pos=(0, 120), 
-            label="S&top")
-        self.Bind(wx.EVT_BUTTON, self.listener.OnStop, self.stopButton)
-        
-        self.reset_buttons()
-        
-    def get_config_filename(self):
-        return self.configFilename.GetPath()
-        
-    def set_status(self, rounds, steps):
-        self.rounds_input.SetValue(rounds)
-        self.steps_input.SetValue(steps)
-        
-    def OnRun(self, event):
-        rounds = self.rounds_input.GetValue()
-        steps = self.steps_input.GetValue()
-        self.listener.run(rounds, steps)
-        
-    # Helper methods
-    def set_buttons_processing(self):
-        self.startButton.Disable()
-        self.runButton.Disable()
-        self.stopButton.Enable()
-        self.rounds_input.Disable()
-        self.steps_input.Disable()
-
-    def set_buttons_ready(self):
-        self.rounds_input.Enable()
-        self.steps_input.Enable()
-        self.startButton.Disable()
-        self.runButton.Enable()
-        self.stopButton.Enable()
-        self.set_status(0, 1)
     
-    def reset_buttons(self):
-        self.stopButton.Disable()
-        self.runButton.Disable()
-        self.startButton.Enable()
-        self.rounds_input.Disable()
-        self.steps_input.Disable()
+def EVT_STOP(win, func):
+    win.Connect(-1, -1, EVT_STOP_ID, func)
 
 class Info(wx.Panel):
     phase_names = {
@@ -245,15 +177,16 @@ class Window(wx.Frame):
         
         self.controls_info_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.controls_info_sizer.Add(self.info, 0, wx.EXPAND)
+        self.controls_info_sizer.Add((20, -1), proportion=0)    # Padding
         self.controls_info_sizer.Add(self.controls, 1, wx.EXPAND)
         
         self.messages_sizer = wx.BoxSizer(wx.VERTICAL)
         self.messages_sizer.Add(self.messages, 1, wx.EXPAND)
-        messages_panel.SetSizer(self.messages_sizer)
+        messages_panel.SetSizerAndFit(self.messages_sizer)
         
         self.graphs_sizer = wx.BoxSizer(wx.VERTICAL)
         self.graphs_sizer.Add(self.graphs, 1, wx.EXPAND)
-        graphs_panel.SetSizer(self.graphs_sizer)
+        graphs_panel.SetSizerAndFit(self.graphs_sizer)
         
         self.interface_sizer.Add(self.controls_info_sizer, 0, wx.EXPAND)
         self.interface_sizer.Add(self.graphs_messages_splitter, 1, wx.EXPAND)
@@ -275,6 +208,7 @@ class Window(wx.Frame):
         
         # Set up event handler for any worker thread results
         EVT_RESULT(self, self.OnResult)
+        EVT_STOP(self, self.OnStop)
         
         # Set up close event so timer is properly stopped
         wx.EVT_CLOSE(self, self.OnClose)        
@@ -324,6 +258,8 @@ class Window(wx.Frame):
             self.worker = WorkerThread(self._simulation, self)
         
     def OnResult(self, event):
+        if not event.source is self.worker: # ongoing simulation was aborted
+            return
         self.worker = None
         self.simulation_info.map.grid = util.update_map(
             self.simulation_info.map.grid, event.result.map.grid
@@ -355,10 +291,11 @@ class Window(wx.Frame):
     def OnStop(self, event):
         self.reset_gui()
         self._simulation = None
+        self.worker = None
         self.simulation_info = None
-        
             
     def OnClose(self, event):
+        # TODO: Fix
         self.Destroy()
         
 def handle_statistics(graphs, round, data):

@@ -10,7 +10,6 @@ Phases:
     Learning
 """
 
-
 import vote
 import priority
 import entities
@@ -153,7 +152,7 @@ class Hearing(Step):
         for agent in self.info.directory.get_voting_agents():
             votes[agent] = agent.hearing(
                 self.info.map, 
-                self.info.cfg['global']['num_max_complaints']
+                self.info.cfg['global']['num max complaints']
             )
             self.info.logger.add_vote(round, agent, 
                 len([v for v in votes[agent] if v.is_complaint()]))
@@ -170,7 +169,7 @@ class GovernmentDecision(DecisionStep):
    def do(self, round):
         government = self.info.directory.get_government()
         decision = government.voting_decision(
-            self.info.cfg["global"]["max_hearing_rounds"]
+            self.info.cfg["global"]["max hearing rounds"]
         )
         return (
             StepResult.no_cells_changed(self, self.info.map, {}, round), 

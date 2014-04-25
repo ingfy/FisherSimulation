@@ -20,12 +20,16 @@ class AgentFactory(object):
     def fisherman(self, home_cell):
         return self._produce_home(Fisherman, "fisherman", home_cell)
         
+    # TODO: Make constructors take complete config dicts
     def aquaculture(self, home_cell):
-        return self._produce_home(Aquaculture, "aquaculture", home_cell)
+        return Aquaculture(self._directory, 
+            self._cfg["aquaculture"]["priorities"], self._cfg["aquaculture"], 
+            home_cell)
         
     def municipality(self):
         # TODO: municipality needs to have its own priorities
-        return self._produce(Municipality, "government")
+        return Municipality(self._directory, self._cfg["municipality"],
+            self._cfg["global"]["aquaculture in blocked"])
         
     def government(self):
         return self._produce(Government, "government")
@@ -107,15 +111,19 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
 # AquacultureSpawner
 
 class AquacultureSpawner(object):
-    def __init__(self, voting_mechanism_class, config, map):
+    def __init__(self, voting_mechanism_class, config, aquaculture_in_blocked, 
+            map):
         self.map = map
         self.voting_mechanism_class = voting_mechanism_class
+        self._aquaculture_in_blocked = aquaculture_in_blocked
         self.config = config
     
     def choose_cell(self, plan):
         # Maybe it should choose the best cell based on public information
+        sites = plan.aquaculture_sites() if self._aquaculture_in_blocked \
+            else [c for c in plan.aquaculture_sites() if not c.is_blocked()]            
         try:
-            return random.choice(plan.aquaculture_sites())
+            return random.choice(sites)
         except IndexError:  # no aquaculture sites left
             return None
         
@@ -127,18 +135,25 @@ class AquacultureSpawner(object):
         
 # Handles the planning
 class Municipality(CommunicatingAgent, PrioritizingAgent):
-    def __init__(self, directory, priorities, decision_mechanism=None):
+    def __init__(self, directory, cfg, aquaculture_in_blocked):
         super(Municipality, self).__init__()
         self.register(directory, self.__class__)
-        self.set_priorities(priorities)
-        self.decision_mechanism = decision_mechanism     
+        self.set_priorities(cfg["priorities"])
+        self.decision_mechanism = None
         self._taxes = {}
+        self._cfg = cfg
+        self._aquaculture_in_blocked = aquaculture_in_blocked
         self.capital = 0.0
         self._plan = None
         
     def round_reset(self):
         self.capital = 0.0
         self._plan = None
+        
+    def plan_check_cell(self, cell):
+        if self._aquaculture_in_blocked:
+            return not cell.has_aquaculture()
+        return not cell.is_blocked()
     
     def collect_tax(self, sender, amount):
         self.send_message(sender, messages.Inform(
@@ -178,7 +193,7 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
             self._plan = plan.CoastalPlan({
                 c: plan.AQUACULTURE_SITE
                     for c in world_map.get_all_cells()
-                        if not c.has_aquaculture()
+                        if self.plan_check_cell(c)
             })
         
         # Convert all cells that have approved complaints to
@@ -363,7 +378,7 @@ class Aquaculture(ProducedAgent):
         home:   A cell where the agent is located.
     """
 
-    def __init__(self, directory, priorities, home, decision_mechanism=None):
+    def __init__(self, directory, priorities, cfg, home):
         ProducedAgent.__init__(self, directory, priorities)
         self.home = home
         self.slot_knowledge[home] = home.get_fish_quantity()

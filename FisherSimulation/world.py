@@ -7,7 +7,6 @@ class Map(object):
     
     def __init__(self, structure, aquaculture_blocking_radius):
         self.set_structure(structure)
-        self._aquaculture_blocking_radius = aquaculture_blocking_radius
     
     def set_structure(self, structure):
         self._structure = structure
@@ -43,7 +42,7 @@ class Map(object):
         return self._structure.get_cell_distance(a, b)
             
     def build_aquaculture(self, agent, cell):
-        radius = self.get_radius_from(cell, self._aquaculture_blocking_radius)
+        radius = self._structure.get_aquaculture_blocking(cell)
         for b in radius:
             if not b == cell:
                 b.block()
@@ -142,14 +141,13 @@ class Slot(object):
         
 # Abstract Structure class
 class AbstractStructure(object):
-    def __init__(self, width, height, cell_size, neighborhood_type="von_neumann"):
-        self._cell_size = cell_size
+    def __init__(self, aquaculture_blocking_radius, neighborhood_type):
         self.set_neighborhood_type(neighborhood_type)
-        self.initialize_slots(width, height)
-
+        self._aquaculture_blocking_radius = aquaculture_blocking_radius
+        
     def initialize_slots(self, width, height):
-        self._slots = [[Slot() for _ in xrange(width)] for _ in xrange(height)]
-
+        raise NotImplementedError
+        
     def set_neighborhood_type(self, neighborhood_type):
         try:
             self.neighborhood = {
@@ -166,15 +164,15 @@ class AbstractStructure(object):
         return None
             
     def get_cell_position(self, cell):
-        return self.get_position(lambda x, y: cell is self._slots[x][y])
+        return self.get_position(lambda x, y: cell is self.slots[x][y])
         
     def get_occupant_position(self, occupant):
         return self.get_position(
-            lambda x, y: occupant is self._slots[x][y].get_occupant()
+            lambda x, y: occupant is self.slots[x][y].get_occupant()
         )
         
     def get_distance(self, (a_x, a_y), (b_x, b_y)):
-        cell_x, cell_y = self._cell_size
+        cell_x, cell_y = self.cell_size
         return math.sqrt(
             ((b_x - a_x) * cell_x) ** 2 + 
             ((b_y - a_y) * cell_y) ** 2
@@ -185,21 +183,25 @@ class AbstractStructure(object):
             self.get_cell_position(a), 
             self.get_cell_position(b)
         )
-                          
         
     def get_occupants_distance(self, a, b):
         return self.get_distance(
             self.get_occupant_position(a),
             self.get_occupant_position(b)
         )
+        
+    def get_aquaculture_blocking(self, cell):
+        pos = self.get_cell_position(cell)
+        return self.get_radius(self._aquaculture_blocking_radius, pos)
             
     def get_coordinates_list(self):
         """ Returns a list of all the coordinates in the structure """
-        return [(x, y) for y in xrange(0, len(self._slots)) for x in xrange(0, len(self._slots[y]))]
+        return [(x, y) for y in xrange(0, len(self.slots)) for x in 
+            xrange(0, len(self.slots[y]))]
             
     def get_grid(self):
         """ Returns all slots as grid corresponding to real-world layout """
-        return self._slots
+        return self.slots
 
     def get_radius(self, r, pos):
         """ Returns all slots in a radius of r meters """
@@ -207,15 +209,15 @@ class AbstractStructure(object):
         
     def get_size(self):
         """ Return size in (width, height) format """
-        return (len(self._slots), len(self._slots[0]))
+        return (len(self.slots), len(self.slots[0]))
         
     def get_all_slots(self):
         """ Return a list of all the slots """
-        return [self._slots[x][y] for (x, y) in self.get_coordinates_list()]
+        return [self.slots[x][y] for (x, y) in self.get_coordinates_list()]
         
     def get_positions_if_valid(self, positions):
         valid_positions = [(x, y) for (x, y) in positions if self.in_bounds(x, y)]
-        return [self._slots[x][y] for (x, y) in valid_positions]
+        return [self.slots[x][y] for (x, y) in valid_positions]
         
     def _get_at_offsets(self, o, x, y):
         """ Return a list of slots at the given offsets <o> from the point (x, y) """
@@ -235,9 +237,17 @@ class AbstractStructure(object):
 
 # FishingStructure to hold general method for initializing good fishing spots
 class FishingStructure(AbstractStructure):
-    def __init__(self, width, height, cell_size, good_spot_frequency, neighborhood_type="von_neumann"):
-        AbstractStructure.__init__(self, width, height, cell_size, neighborhood_type)
+    def __init__(self, cfg, good_spot_frequency):
+        AbstractStructure.__init__(self, 
+            cfg["aquaculture blocking radius"], 
+            cfg["neighbourhood type"]
+        )
+        self.cell_size = (cfg["cell width"], cfg["cell height"])
+        self.initialize_slots(cfg["width"], cfg["height"])
         self.initialize_fishing_spots(good_spot_frequency)
+        
+    def initialize_slots(self, width, height):
+        self.slots = [[Slot() for _ in xrange(width)] for _ in xrange(height)]
 
     def initialize_fishing_spots(self, good_spot_frequency):
         slots = self.get_all_slots()
@@ -261,7 +271,7 @@ class GridStructure(FishingStructure):
         return w > x >= 0 and h > y >= 0
         
     def get_radius(self, r, (x, y)):
-        sx, sy = self._cell_size
+        sx, sy = self.cell_size
         offsets = [e for subl in [
             [(  0, yy), (  0, -yy), 
              ( xx, 0),  ( xx,  yy), ( xx, -yy),
@@ -274,7 +284,8 @@ class GridStructure(FishingStructure):
         return self.get_positions_if_valid([(x + X, y + Y) for (X, Y) in o])
 
     def neighborhood_moore(self, x, y):
-        return self._get_at_offsets([(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)])
+        offs = [(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)]
+        return self._get_at_offsets(offs)
 
     def neighborhood_von_neumann(self, x, y):
         return self._get_at_offsets([(1,0),(0,1),(-1,0),(0,-1)])
@@ -288,7 +299,7 @@ class TorusStructure(GridStructure):
         return (x % w, y % h)
     
     def get_radius(self, r, (x, y)):
-        sx, sy = self._cell_size
+        sx, sy = self.cell_size
         # In each direction
         offsets = [e for subl in [
             [(  0, yy), (  0, -yy), 
@@ -299,11 +310,12 @@ class TorusStructure(GridStructure):
         return self._get_at_offsets(offsets, x, y)
         
     def neighborhood_moore(self, x, y):
-        return self._get_at_offsets([(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)])
+        offs = [(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)]
+        return self._get_at_offsets(offs)
             
     def neighborhood_moore(self, x, y):
         return self._get_at_offsets([(1,0),(0,1),(-1,0),(0,-1)])
             
     def _get_at_offsets(self, o, x, y):
-        return [self._slots[X][Y] for (X, Y) in
+        return [self.slots[X][Y] for (X, Y) in
             [self._absolute(x + xx, y + yy) for (xx, yy) in o]]

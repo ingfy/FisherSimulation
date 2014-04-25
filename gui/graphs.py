@@ -77,8 +77,10 @@ class Graphs(BufferedCanvas):
             min_val = min(values)
             max_val = max(values)
             
+            
+            
             # axis label font
-            dc.SetFont(wx.Font(pointSize=6, family=wx.FONTFAMILY_DEFAULT,
+            dc.SetFont(wx.Font(pointSize=8, family=wx.FONTFAMILY_DEFAULT,
                 style=wx.FONTSTYLE_NORMAL, weight=wx.FONTWEIGHT_NORMAL))
                 
             # vertical axis labels
@@ -151,14 +153,14 @@ class Graphs(BufferedCanvas):
                 
             # Draw explanations
             num_expl = len(data)
-            min_size, max_size = size_constraints = (6, 10)
-            expl_h = h / 5
-            expl_size = max(min_size, min(max_size, float(expl_h) / num_expl))    
+            min_size, max_size = size_constraints = (6, 20)
+            expl_h = h / 4
+            expl_size = max(min_size, min(max_size, float(expl_h)/num_expl/1.5))    
             dc.SetFont(wx.Font(pointSize=expl_size, 
                 family=wx.FONTFAMILY_DEFAULT, style=wx.FONTSTYLE_NORMAL, 
                 weight=wx.FONTWEIGHT_NORMAL))
-            expl_box_w = 8
-            expl_box_h = 8
+            expl_box_w = expl_size
+            expl_box_h = expl_size
             expl_padding = 2
             expl_text_padding = 2
             expl_w = max(
@@ -170,8 +172,6 @@ class Graphs(BufferedCanvas):
             dc.SetPen(wx.Pen(wx.Colour(255, 255, 255, alpha=100), 1))
             dc.SetBrush(wx.Brush(wx.Colour(255, 255, 255, alpha=100)))
             dc.DrawRectangle(expl_x, expl_y, expl_w, expl_h)
-            expl_box_w = 8
-            expl_box_h = 8
             expl_padding = 2
             expl_text_padding = 2
             __, line_h = dc.GetTextExtent("A")

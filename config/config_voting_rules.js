@@ -1,24 +1,29 @@
 {
     "global": {
-        "num_max_complaints": 10,
-        "max_hearing_rounds": 3
+        "num max complaints":     10,
+        "max hearing rounds":     3,
+        "aquaculture in blocked": false
     },
     "world": {
         "structure": {
-            "type": "grid",
-            "width": 15,
-            "height": 15,
-            "good_spot_frequency": 0.1,
-            "cell_width": 25,
-            "cell_height": 25,
-            "aquaculture blocking radius": 25
-        }        
+            "class": {
+                "type":  "class",
+                "class": "FisherSimulation.world.GridStructure"
+            },
+            "width":                       15,
+            "height":                      15,
+            "cell width":                  25,
+            "cell height":                 25,
+            "aquaculture blocking radius": 25,
+            "neighbourhood type":          "von_neumann"
+        },
+        "good spot frequency": 0.1
     },
     "interface": {
-        "print messages":                   "False"
+        "print messages": true
     },
     "fisherman": {
-        "num": 20,
+        "num":        20,
         "priorities": {
             "OwnProfits":                    10.0,
             "CommunityWealth":               2.0,
@@ -29,81 +34,56 @@
         },
         "learning mechanism": {
             "class": {
-                "type":     "class",
-                "class":    "FisherSimulation.ga.Evolution"
-            },
-            "config class": {
-                "type":     "class",
-                "class":    "FisherSimulation.ga.EvolutionConfig"
+                "type":  "class",
+                "class": "FisherSimulation.ga.Evolution"
             },
             "phenotype class": {
-                "type":     "class",
-                "class":    "FisherSimulation.ga.FishermanVotingRules"
+                "type":  "class",
+                "class": "FisherSimulation.ga.FishermanVotingRules"
             },
             "genotype class": {
-                "type":     "class",
-                "class":    "FisherSimulation.ga.FishermanRulesGenotype"
+                "type":  "class",
+                "class": "FisherSimulation.ga.FishermanRulesGenotype"
             },
-            "elitism":                       3,
-            "selection mechanism":           "rank selection",
-            "crossover rate":                0.005,
-            "mutation rate":                 0.005,
-            "genome mutation rate":          0.00005
+            "elitism":              3,
+            "selection mechanism":  "rank selection",
+            "crossover rate":       0.005,
+            "mutation rate":        0.005,
+            "genome mutation rate": 0.00005
             
         },
         "voting mechanism class": {
-            "type": "class",
+            "type":  "class",
             "class": "FisherSimulation.ga.FishermanVotingRules"
         }
     },
     "aquaculture": {
-        "num": 0,
-        "priorities": {
-            "OwnProfits":                    5.0,
-            "SalmonPrice":                   2.0,
-            "AquacultureIndustryExisting":   1.0
-        },
+        "priorities": {},
         "voting mechanism class": {
-            "type":     "class",
-            "class":    "FisherSimulation.vote.AlwaysApprove"
+            "type":  "class",
+            "class": "FisherSimulation.vote.AlwaysApprove"
         }
     },
     "civilian": {
-        "num": 100,
-        "priorities": {
-            "CommunityWealth":               4.0,
-            "FishingIndustryExisting":       3.0,
-            "AquacultureIndustryExisting":   3.0,
-            "NonintrusiveAquaculture":       1.0
-        },
-        "voting mechanism class":           {
+        "num":        0,
+        "priorities": {},
+        "voting mechanism class": {
             "type": "class",
             "class": "FisherSimulation.vote.AlwaysApprove"
         }
     },
     "tourist": {
-        "num": 30,
-        "priorities": {
-            "CommunityWealth":               1.0,
-            "FishingIndustryExisting":       2.0,
-            "NonintrusiveAquaculture":       2.0  
-        },
-        "voting mechanism class":           {
+        "num":        0,
+        "priorities": {},
+        "voting mechanism class": {
             "type": "class",
             "class": "FisherSimulation.vote.AlwaysApprove"
         }
     },
     "government": {
-        "num": 1,
-        "priorities": {
-        }
+        "priorities": {}
     },
     "municipality": {
-        "num": 1,
-        "priorities": {
-        }
-    },
-    "aquaculture_spawner": {
-        "spawn_interval": 20
+        "priorities": {}
     }
 }

@@ -57,12 +57,9 @@ class Simulation(object):
         agent_factory.government()
         agent_factory.municipality()
         
-        cfg_struct = self._cfg['world']['structure']
-        gs = world.GridStructure(
-            cfg_struct['width'], 
-            cfg_struct['height'], 
-            (cfg_struct['cell_width'], cfg_struct['cell_height']), 
-            cfg_struct['good_spot_frequency']
+        gs = self._cfg['world']['structure']['class'](
+            self._cfg['world']['structure'],
+            self._cfg['world']['good spot frequency']
         )
         map = world.Map(gs, 
             self._cfg['world']['structure']['aquaculture blocking radius']
@@ -83,6 +80,7 @@ class Simulation(object):
         aquaculture_spawner = entities.AquacultureSpawner(
             self._cfg['aquaculture']['voting mechanism class'],
             self._cfg['aquaculture'],
+            self._cfg["global"]["aquaculture in blocked"],
             map
         )
         
@@ -103,10 +101,10 @@ class Simulation(object):
             name = agent_types_config_name[entity]
             if "learning mechanism" in self._cfg[name]:
                 learning = self._cfg[name]["learning mechanism"]["class"]
-                config = self._cfg[name]["learning mechanism"]["config class"]
+                config = self._cfg[name]["learning mechanism"]
                 learning_mechanisms[entity] = learning(
                     dir.get_agents(type = entity),
-                    config.from_dict(self._cfg[name]["learning mechanism"])
+                    config
                 )        
         
         info = SimulationInfo(
