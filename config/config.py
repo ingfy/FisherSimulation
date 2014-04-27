@@ -9,6 +9,25 @@ agent_types = ['fisherman', 'aquaculture', 'tourist', 'government',
     'municipality', 'civilian']
 voting_agents = ['fisherman', 'aquaculture', 'tourist', 'civilian']
 
+class Config(dict):
+    def __init__(self, dictionary, globals=None):    
+        for key in dictionary:
+            dict.__setitem__(self, key, dictionary[key])
+            
+        if globals is None and "global" in self:
+            self.globals = Config(dict.__getitem__(self, "global"), None)
+        else:
+            self.globals = globals
+            
+    def __getitem__(self, key):
+        try:
+            item = dict.__getitem__(self, key)
+        except:
+            raise
+        if item.__class__ is dict:
+            return Config(item, self.globals)
+        return item
+
 def load(varargs = None, filename = cfg_json_filename):
     with open(filename, 'r') as f:
         return process_config(json.load(f))
@@ -16,7 +35,7 @@ def load(varargs = None, filename = cfg_json_filename):
 def process_config(cfg):
     cfg = convert_priorities(cfg)
     cfg = convert_classes(cfg)
-    return cfg
+    return Config(cfg)
     
 def convert_classes(cfg):
     if isinstance(cfg, dict):

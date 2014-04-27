@@ -4,6 +4,7 @@ import vote
 import random
 import nn
 import plan
+import decisions
 import ga
 
 class AgentFactory(object):
@@ -12,27 +13,24 @@ class AgentFactory(object):
         self._cfg = cfg
         
     def _produce(self, type, cfg_key):
-        return type(self._directory, self._cfg[cfg_key]["priorities"])
+        return type(self._directory, self._cfg[cfg_key])
         
     def _produce_home(self, type, cfg_key, home):
-        return type(self._directory, self._cfg[cfg_key]["priorities"], home)
+        return type(self._directory, self._cfg[cfg_key], home)
     
     def fisherman(self, home_cell):
         return self._produce_home(Fisherman, "fisherman", home_cell)
         
     # TODO: Make constructors take complete config dicts
     def aquaculture(self, home_cell):
-        return Aquaculture(self._directory, 
-            self._cfg["aquaculture"]["priorities"], self._cfg["aquaculture"], 
-            home_cell)
+        return Aquaculture(self._directory, self._cfg["aquaculture"], home_cell)
         
     def municipality(self):
         # TODO: municipality needs to have its own priorities
-        return Municipality(self._directory, self._cfg["municipality"],
-            self._cfg["global"]["aquaculture in blocked"])
+        return Municipality(self._directory, self._cfg["municipality"])
         
     def government(self):
-        return self._produce(Government, "government")
+        return Government(self._directory, self._cfg["government"])
         
     def tourist(self):
         return self._produce(Tourist, "tourist")
@@ -54,15 +52,16 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
                             has.
     """
     
-    def __init__(self, directory, priorities):
+    def __init__(self, directory, cfg):
         super(ProducedAgent, self).__init__()
         self.register(directory, self.__class__, voting=True)
-        self.set_priorities(priorities)
+        self.set_priorities(cfg["priorities"])
         self.capital = 0
         self.slot_knowledge = {}
         self.threats = []
         self.decision_mechanism = None
         self._guess_mean = 0.6
+        self._num_max_complaints = cfg.globals["num max complaints"]
         self._guess_stdev = 0.1
         self._plan_message = None
     
@@ -75,7 +74,7 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
         self.capital = 0        
         
     def add_voting_mechanism(self, mechanism):
-        self.decision_mechanism = mechanism        
+        self.decision_mechanism = mechanism
         
     def plan_hearing_notification(self, message):
         self._plan_message = message
@@ -89,9 +88,8 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
             if not cell in self.slot_knowledge:
                 self.slot_knowledge[cell] = self.estimate_cell_quality(cell)
         
-    def hearing(self, world_map, num_max_complaints):        
-        votes = self.decide_votes(self._plan_message.plan, world_map, 
-            num_max_complaints)
+    def hearing(self, world_map):        
+        votes = self.decide_votes(self._plan_message.plan, world_map)
         gov = self.get_directory().get_government()
         self.send_message(
             gov,
@@ -103,10 +101,9 @@ class ProducedAgent(VotingAgent, PrioritizingAgent, WorkingAgent):
         )
         return votes
         
-    def decide_votes(self, plan, world_map, num_max_complaints):
+    def decide_votes(self, plan, world_map):
         return self.decision_mechanism.decide_votes(self, plan, world_map, 
-            num_max_complaints)    
-        
+            self._num_max_complaints)
         
 # AquacultureSpawner
 
@@ -131,29 +128,54 @@ class AquacultureSpawner(object):
         agent = factory.aquaculture(cell)
         self.voting_mechanism_class.new(agent, self.config, self.map)
         return agent
-
+        
+class EverythingAquaculture(decisions.PlanningMechanism):
+    def __init__(self, cfg):
+        self._aquaculture_in_blocked = cfg.globals["aquaculture in blocked"]
+        
+    def _check_cell(self, cell):
+        if self._aquaculture_in_blocked:
+            return not cell.has_aquaculture()
+        return not cell.is_blocked()
+        
+    def create_plan(self, world_map, coastplan=None, complaints=None):
+        if coastplan is None:
+            # If new plan, add all possible cells as aquaculture sites
+            
+            # TODO:
+            #  Maybe divide into different kinds of areas first,
+            #  maybe only 50% of the map for aquaculture.
+            coastplan = plan.CoastalPlan({
+                c: plan.AQUACULTURE_SITE
+                    for c in world_map.get_all_cells()
+                        if self._check_cell(c)
+            })
+        
+        # Convert all cells that have approved complaints to
+        # reserved zones.
+        if not complaints is None:
+            for c in complaints:
+                if c.approved:
+                    coastplan[c.cell] = plan.RESERVED_ZONE
+                    
+        return coastplan
         
 # Handles the planning
 class Municipality(CommunicatingAgent, PrioritizingAgent):
-    def __init__(self, directory, cfg, aquaculture_in_blocked):
+    def __init__(self, directory, cfg):
         super(Municipality, self).__init__()
         self.register(directory, self.__class__)
         self.set_priorities(cfg["priorities"])
         self.decision_mechanism = None
         self._taxes = {}
         self._cfg = cfg
-        self._aquaculture_in_blocked = aquaculture_in_blocked
+        self._planning_mechanism = cfg["planning mechanism class"](cfg)
         self.capital = 0.0
         self._plan = None
         
     def round_reset(self):
         self.capital = 0.0
         self._plan = None
-        
-    def plan_check_cell(self, cell):
-        if self._aquaculture_in_blocked:
-            return not cell.has_aquaculture()
-        return not cell.is_blocked()
     
     def collect_tax(self, sender, amount):
         self.send_message(sender, messages.Inform(
@@ -184,24 +206,9 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
         return self._plan
         
     def create_plan(self, world_map, complaints=None):
-        if self._plan is None:
-            # If new plan, add all possible cells as aquaculture sites
-            
-            # TODO:
-            #  Maybe divide into different kinds of areas first,
-            #  maybe only 50% of the map for aquaculture.
-            self._plan = plan.CoastalPlan({
-                c: plan.AQUACULTURE_SITE
-                    for c in world_map.get_all_cells()
-                        if self.plan_check_cell(c)
-            })
-        
-        # Convert all cells that have approved complaints to
-        # reserved zones.
-        if not complaints is None:
-            for c in complaints:
-                if c.approved:
-                    self._plan[c.cell] = plan.RESERVED_ZONE
+        self._plan = self._planning_mechanism.create_plan(
+            world_map, self._plan, complaints
+        )
                     
     def get_plan(self):
         return self._plan
@@ -216,17 +223,25 @@ class Municipality(CommunicatingAgent, PrioritizingAgent):
             )
         )
 
-class ComplaintApproveMoreThanOne(object):
-    def set_input_values(self, values):
-        assert "num_votes" in values, "Expected number of votes <num_votes>."
-        self._num_votes = values["num_votes"]
+class ComplaintApproveMoreThanOne(decisions.GovernmentDecision):
+    def __init__(self, cfg):
+        self._max_hearing_rounds = cfg.globals["max hearing rounds"]
+        self._hearing_count = 0
         
-    def process(self):
-        # If more than one vote, approve complaint
-        self._approved = 1 if self._num_votes > 1 else 0
-        
-    def get_output_values(self):
-        return {"approve": self._approved}
+    def round_reset(self):
+        self._hearing_count = 0
+
+    def decision(self, complaints):
+        if self._hearing_count >= self._max_hearing_rounds:
+            return complaints
+            
+        self._hearing_count += 1
+        for cell in complaints:
+            approve = complaints[cell].count() > 1
+            if approve:
+                complaints[cell].approve()
+                
+        return complaints
         
 class License(object):
     pass
@@ -236,13 +251,12 @@ class License(object):
 
 # Handles complaints to the plan
 class Government(CommunicatingAgent, PrioritizingAgent):
-    def __init__(self, directory, priorities, decision_mechanism=None):
+    def __init__(self, directory, cfg):
         self._complaints = {}
         super(Government, self).__init__()
         self.register(directory, self.__class__)
-        self.set_priorities(priorities)
-        self._decision_mechanism = \
-            decision_mechanism or ComplaintApproveMoreThanOne()
+        self.set_priorities(cfg["priorities"])
+        self._decision_mechanism = cfg["decision mechanism class"](cfg)
         self._licenses = []
         self.hearing_count = 0
         self.max_hearing_count = 3
@@ -257,16 +271,16 @@ class Government(CommunicatingAgent, PrioritizingAgent):
             
     def round_reset(self):
         self.new_vote_round()
-        self.hearing_count = 0
+        self._decision_mechanism.round_reset()
         
     def vote(self, message):
         for v in message.votes:
             cell = v.cell
             if v.value == vote.DISAPPROVE:
                 if not cell in self._complaints:
-                    self._complaints[cell] = plan.Complaint(cell)
+                    self._complaints[cell] = plan.Complaint(v)
                 else:
-                    self._complaints[cell].add()
+                    self._complaints[cell].add(v)
             
         # Broadcast the votes
         broadcast_recipients = self.get_directory().get_agents(
@@ -279,22 +293,9 @@ class Government(CommunicatingAgent, PrioritizingAgent):
             )
         )
         
-    def voting_decision(self, max_hearing_rounds):
-        if self.hearing_count >= max_hearing_rounds:
-            return plan.Decision.APPROVE
-            
-        self.hearing_count += 1
-        all_voters = self.get_directory().get_agents(exclude = self)
-        for cell in self._complaints:
-            self._decision_mechanism.set_input_values({
-                "num_votes": self._complaints[cell].num
-            })
-            self._decision_mechanism.process()
-            self._complaints[cell].approved = \
-                self._decision_mechanism.get_output_values()["approve"] > 0.5
-        
-        return plan.Decision.REVIEW \
-            if len(self.get_approved_complaints()) > 0 \
+    def voting_decision(self):
+        self._complaints = self._decision_mechanism.decision(self._complaints)
+        return plan.Decision.REVIEW if len(self.get_approved_complaints()) > 1 \
             else plan.Decision.APPROVE
 
     def get_approved_complaints(self):
@@ -318,8 +319,8 @@ class Fisherman(ProducedAgent):
     Attributes:
         home:   A cell where the agent prioritizes to work.
     """
-    def __init__(self, directory, priorities, home_cell):
-        ProducedAgent.__init__(self, directory, priorities)
+    def __init__(self, directory, cfg, home_cell):
+        ProducedAgent.__init__(self, directory, cfg)
         self.home = home_cell
         self.first_home = self.home #TODO:DELETE
         self.home.populate(self)
@@ -378,8 +379,8 @@ class Aquaculture(ProducedAgent):
         home:   A cell where the agent is located.
     """
 
-    def __init__(self, directory, priorities, cfg, home):
-        ProducedAgent.__init__(self, directory, priorities)
+    def __init__(self, directory, cfg, home):
+        ProducedAgent.__init__(self, directory, cfg)
         self.home = home
         self.slot_knowledge[home] = home.get_fish_quantity()
         self._work_efficiency = 10
@@ -421,8 +422,8 @@ class Tourist(ProducedAgent):
         priority_slots: A list of cells that the agent would prefer to not have
                         aquaculture built on.
     """
-    def __init__(self, directory, priorities, home_cell, world_map, radius):
-        ProducedAgent.__init__(self, directory, priorities)
+    def __init__(self, directory, cfg, home_cell, world_map, radius):
+        ProducedAgent.__init__(self, directory, cfg)
         self.priority_slots = Tourist.calculate_priority_slots(
             radius, world_map, home_cell
         )
@@ -442,8 +443,8 @@ class Tourist(ProducedAgent):
 #
 
 class Civilian(ProducedAgent):
-    def __init__(self, directory, priorities):
-        ProducedAgent.__init__(self, directory, priorities)
+    def __init__(self, directory, cfg):
+        ProducedAgent.__init__(self, directory, cfg)
 
     def work(self):
         pass

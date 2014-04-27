@@ -39,13 +39,20 @@ RESERVED_ZONE = PlanEntity(
 )
     
 class Complaint(object):
-    def __init__(self, cell):
-        self.cell = cell
+    def __init__(self, vote):
+        self.cell = vote.cell
         self.approved = False
-        self.num = 1
+        self.votes = [vote]
         
-    def add(self):
-        self.num += 1
+    def approve(self):
+        self.approved = True
+        
+    def count(self):
+        return len(self.votes)
+        
+    def add(self, vote):
+        assert vote.cell is self.cell, "Complaint is not about the same cell!"
+        self.votes.append(vote)
         
 class Decision(object):
     APPROVE = 1000

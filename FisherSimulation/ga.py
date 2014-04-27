@@ -177,7 +177,7 @@ class DecisionMechanism(object):
             
 # Concrete decision making
 
-class FishermanVotingRules(vote.VotingDecisionMechanism, Phenotype):
+class FishermanVotingRules(decisions.VotingDecisionMechanism, Phenotype):
     data_name = "fisherman"
     
     DIST_PROB = "Distance Probability"
@@ -245,7 +245,7 @@ class FishermanRulesGenotype(Genotype):
         }[int("".join(self.genome), 2) / 2]
 
             
-class FishermanVotingNN(vote.VotingDecisionMechanism, Phenotype):
+class FishermanVotingNN(decisions.VotingDecisionMechanism, Phenotype):
     data_name = "fisherman"
 
     inputs = [

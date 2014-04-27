@@ -19,46 +19,11 @@ class Vote(object):
         return c(cell, DISAPPROVE)
         
     def is_complaint(self):
-        return self.value == DISAPPROVE
-
-class VotingDecisionMechanism(object):
-    """Interface for voting decisions."""
-    
-    def decide_votes(self, agent, coastal_plan, world_map, max_complaints):
-        """Decide whether to complain or not for each vote.
-        
-        Arguments:
-            agent:          The agent deciding the vote
-            coastal_plan:   A plan.CoastalPlan instance
-            
-        Returns:
-            A list of Vote instances with APPROVE or DISAPPROVE values for cells 
-            with planned aquaculture in the plan.
-            
-            There is a maximum number of complaints allowed, so they have to
-            be prioritized.
-        """
-        raise NotImplementedException()
-        
-    @classmethod
-    def new(c, agent, config, world):
-        """Add an instance of this mechanism to the given agent.        
-        
-        Agents have a method:
-            add_voting_mechanism(mechanism)
-        
-        Arguments:
-            agents: A list of agents to add the mechanism to
-            config: The configuration object for the given agent,
-                    for example cfg['fishermen'] if agents are fishermen.
-            world:  The world instance
-        """
-        raise NotImplementedException()
-        
+        return self.value == DISAPPROVE        
 
 # Concrete
 
-class AlwaysApprove(VotingDecisionMechanism):
+class AlwaysApprove(decisions.VotingDecisionMechanism):
     def decide_votes(self, agent, coastal_plan, world_map, max_complaints):
         return []
         

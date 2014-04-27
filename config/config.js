@@ -68,7 +68,7 @@
         "num":        0,
         "priorities": {},
         "voting mechanism class": {
-            "type": "class",
+            "type":  "class",
             "class": "FisherSimulation.vote.AlwaysApprove"
         }
     },
@@ -76,14 +76,22 @@
         "num":        0,
         "priorities": {},
         "voting mechanism class": {
-            "type": "class",
+            "type":  "class",
             "class": "FisherSimulation.vote.AlwaysApprove"
         }
     },
     "government": {
-        "priorities": {}
+        "priorities": {},
+        "decision mechanism class": {
+            "type": "class",
+            "class": "FisherSimulation.entities.ComplaintApproveMoreThanOne"
+        }
     },
     "municipality": {
-        "priorities": {}
+        "priorities": {},
+        "planning mechanism class": {
+            "type":  "class",
+            "class": "FisherSimulation.entities.EverythingAquaculture"
+        }
     }
 }
