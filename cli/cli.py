@@ -3,6 +3,8 @@ import sys
 from FisherSimulation import util
 from FisherSimulation import phases
 
+DEFAULT_CONFIG_FILE = "config/config.js"
+
 class CommandLineInterface(object):
     def __init__(self):
         self.simulation = simulation.Simulation()
@@ -10,7 +12,7 @@ class CommandLineInterface(object):
 
     def start(self):
         config_filename = input_or_default(
-            "Configuration file?", self.simulation.get_default_config_filename()
+            "Configuration file?", DEFAULT_CONFIG_FILE
         )
         self.simulation.setup_config(filename=config_filename)
         print "Configuration setup finished."

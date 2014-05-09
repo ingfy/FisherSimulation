@@ -1,8 +1,11 @@
 {
     "global": {
-        "num max complaints":     10,
-        "max hearing rounds":     3,
-        "aquaculture in blocked": false
+        "num max complaints":               10,
+        "max hearing rounds":               3,
+        "aquaculture blocking radius":      25,
+        "aquaculture damage radius":        100,
+        "aquaculture damage proportion":    1,
+        "aquaculture in blocked":           false
     },
     "world": {
         "structure": {
@@ -14,7 +17,6 @@
             "height":                      15,
             "cell width":                  25,
             "cell height":                 25,
-            "aquaculture blocking radius": 25,
             "neighbourhood type":          "von_neumann"
         },
         "good spot frequency": 0.1
@@ -29,7 +31,7 @@
             "CommunityWealth":               2.0,
             "WildFishPrice":                 2.0,
             "FishingIndustryExisting":       3.0,
-            "NaturalFishHealth":             2.0,
+            "NaturalFishHealth":             4.0,
             "AquacultureIndustryExisting":   1.0
         },
         "learning mechanism": {
@@ -58,7 +60,8 @@
         }
     },
     "aquaculture": {
-        "priorities": {},
+        "priorities":      {},
+        "work efficiency": 10,
         "voting mechanism class": {
             "type":  "class",
             "class": "FisherSimulation.vote.AlwaysApprove"
@@ -84,14 +87,15 @@
         "priorities": {},
         "decision mechanism class": {
             "type": "class",
-            "class": "FisherSimulation.entities.ComplaintApproveMoreThanOne"
-        }
+            "class": "FisherSimulation.dm.ApproveProbability"
+        },
+        "complaint approval probability": 0.5
     },
     "municipality": {
         "priorities": {},
         "planning mechanism class": {
             "type":  "class",
-            "class": "FisherSimulation.entities.EverythingAquaculture"
+            "class": "FisherSimulation.dm.EverythingAquaculture"
         }
     }
 }

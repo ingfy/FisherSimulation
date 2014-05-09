@@ -1,4 +1,14 @@
+"""
+The plan module contains classes that simplify dealing with the coastal 
+plan.
+"""
+
 class CoastalPlan(dict):
+    """
+    This class subclasses the standard Python dictionary, and is used to map 
+    cells to plan entities.
+    """
+    
     def __init__(self, dictionary):
         for key in dictionary:
             dict.__setitem__(self, key, dictionary[key])
@@ -13,8 +23,13 @@ class CoastalPlan(dict):
         return self._of_type(RESERVED_ZONE)
     
 class PlanEntity(object):
+    """
+    Items in the coastal plan are plan entities, and these have a description. 
+    There are two entities implemented.
+    """
+
     def __init__(self, description=None):
-        self.description = description
+        self.description = description  
         
     def __str__(self):
         if self.description is None:
@@ -39,6 +54,11 @@ RESERVED_ZONE = PlanEntity(
 )
     
 class Complaint(object):
+    """
+    A complaint is an entity that gathers negative votes about a certain cell. 
+    It has an approved-flag for the government to set.
+    """
+
     def __init__(self, vote):
         self.cell = vote.cell
         self.approved = False
@@ -55,5 +75,10 @@ class Complaint(object):
         self.votes.append(vote)
         
 class Decision(object):
-    APPROVE = 1000
-    REVIEW  = 2000
+    """
+    The decision class is used as a name space for the overall plan decisions 
+    the government can make: approve, or review.
+    """
+
+    APPROVE = object()
+    REVIEW  = object()

@@ -1,6 +1,11 @@
 """
 Implementation of the overall simulation process, divided into steps.
 
+The simulation is split into phases or steps, and the sequence and actions of 
+each step are implemented in the phases module. Each step is implemented as a 
+class with a ``do'' method where the processing for that step takes place. They 
+all inherit from a common interface.
+
 Phases:
     CoastalPlanning
     Hearing
@@ -242,6 +247,11 @@ class Building(Step):
                     agent, 
                     location
                 ))
+                
+        cells = self.info.map.get_all_cells()
+        data["statistics"]["total fish quantity * 10"] = {
+            "value": sum(cell.get_fish_quantity() for cell in cells) / 10.0
+        }
         data["statistics"]["number of aquacultures *10"] = {
             "value": len(
                 self.info.directory.get_agents(type = entities.Aquaculture)

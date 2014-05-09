@@ -131,10 +131,11 @@ class Slot(object):
         blocked         Boolean
         fishermen       List<Fisherman>
         num_fishermen   Integer
+        quality         Float
     """
     
     def __str__(self):
-        attributes_text = {
+        bool_attributes_text = {
             "Land": self.land,
             "Spawn": self.spawning,
             "Aqltr": self.aquaculture,
@@ -143,8 +144,8 @@ class Slot(object):
         }
         return "CELL[%s]" % (
             ", ".join(
-                ["%s: %s" % (key, "YES" if attributes_text[key] else "NO") 
-                    for key in attributes_text])
+                ["%s: %s" % (key, "YES" if bool_attributes_text[key] else "NO") 
+                    for key in bool_attributes_text])
         )
         
     @classmethod
@@ -162,6 +163,7 @@ class Slot(object):
         obj.fishermen = [Fisherman.from_object(e) for e in occupants if 
             e.__class__ == entities.Fisherman]
         obj.num_fishermen = len(occupants) if obj.fisherman else 0
+        obj.quality = world_slot.get_fish_quantity()
         
         return obj
         

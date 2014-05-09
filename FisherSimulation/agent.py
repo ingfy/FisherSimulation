@@ -58,7 +58,10 @@ class CommunicatingAgent(IdentifyingAgent):
         
 class VotingAgent(CommunicatingAgent):
     def decide_vote(self, target_message):
-        raise NotImplementedException        
+        raise NotImplementedError()
+        
+    def add_voting_mechanism(self, mechanism):
+        raise NotImplementedError()
         
     def vote_call_notification(self, message):
         self._areas_threatened.add(message.target_message.cell)

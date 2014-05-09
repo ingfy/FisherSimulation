@@ -1,4 +1,4 @@
-import sys
+    import sys
 import numpy
 import entities
 from time import strftime
@@ -61,7 +61,7 @@ class VoteFitnessRelation(LogEvent):
         
     def add_vote(self, num_complaints):
         self.num_complaints = num_complaints
-        
+       
     def add_fitness(self, fitness):
         self.fitness = fitness
 
@@ -103,14 +103,14 @@ class Logger(object):
             
     def save_vote_fitness_relation(self, round, agent):
         line = "%(round)d,%(agent)s,%(num_complaints)d,%(fitness)f\n"
-        with open(vote_fitness_relation_filename, "a") as file:
-            rel = self.vote_fitness_relations[round][agent]
-            text = line % {
-                "round":            round,
-                "agent":            agent.get_id(),
-                "num_complaints":   rel.num_complaints,
-                "fitness":          rel.fitness
-            }
+        rel = self.vote_fitness_relations[round][agent]
+        text = line % {
+            "round":            round,
+            "agent":            agent.get_id(),
+            "num_complaints":   rel.num_complaints,
+            "fitness":          rel.fitness
+        }
+        with open(vote_fitness_relation_filename, "a") as file:            
             file.write(text)
 
     def add_fitness(self, round, agent, fitness):

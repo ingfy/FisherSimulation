@@ -1,3 +1,12 @@
+"""
+Messages are the form of inter-agent communication found in the system. The 
+messages contain a meta info object, which describes the sender, recipients and 
+time of sending. When a message is received by an agent, it calls a method (a 
+__reaction__ method) in that agent that is custom for each message type. This 
+way agents that expect to receive a certain kind of message need to implement 
+that method.
+"""
+
 import vote
 
 class MetaInfo(object):
@@ -11,7 +20,7 @@ class MetaInfo(object):
         source:     An Agent, the sender of the message
         target:     An Agent, the recipient of the message
         timestamp:  An integer representing the the message was sent
-        type:       A string indicating that the message has a single recipient.
+        type:       A string indicating that the message has a single recipient.x
     """
 
     def __init__(self, source, target, timestamp=None):
@@ -63,7 +72,8 @@ class Reply(Message):
     reply_to_type = Message
 
     def __init__(self, metainfo, reply_to):
-        assert isinstance(reply_to, self.reply_to_type), "Unexpected type for reply_to."
+        assert isinstance(reply_to, self.reply_to_type), \
+            "Unexpected type for reply_to."
         Message.__init__(self, metainfo)
         self.reply_to = reply_to
 

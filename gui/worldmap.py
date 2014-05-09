@@ -86,9 +86,9 @@ class WorldMap(BufferedCanvas):
             for i in xrange(num_hor):
                 for j in xrange(num_ver):
                     x, y = (cell_w * i, cell_h * j)
-                    if map.grid[i][j].spawning: 
-                        draw_fish_top_left(dc, x, y, cell_w, cell_h, fish_pen, 
-                            fish_brush)
+                    #if map.grid[i][j].spawning: 
+                    draw_fish_top_left(dc, map.grid[i][j].quality, x, y, 
+                        cell_w, cell_h, fish_pen, fish_brush)
                     if map.grid[i][j].blocked:
                         draw_blocked(dc, x, y, cell_w, cell_h, blocked_color)
                     if map.grid[i][j].fisherman:
@@ -109,6 +109,7 @@ class WorldMap(BufferedCanvas):
             return True
             
         except Exception, e:
+            print e
             return False
             
 def draw_blocked(dc, x, y, cell_w, cell_h, color):
@@ -164,8 +165,8 @@ def draw_boat_bottom_right(dc, x, y , cell_w, cell_h, color, num):
     oy = cell_h - scale / 8 - cell_h / 4
     draw_boat_center(dc, ox + x, oy + y, cell_w, cell_h, color, num)
             
-def draw_fish_center(dc, x, y, cell_w, cell_h, p, b):
-    scale = min(cell_w, cell_h)
+def draw_fish_center(dc, size, x, y, cell_w, cell_h, p, b):
+    scale = min(cell_w, cell_h) * size
     dc.SetPen(p)
     dc.SetBrush(b)
     # Draw body
@@ -177,8 +178,8 @@ def draw_fish_center(dc, x, y, cell_w, cell_h, p, b):
                     wx.Point(x + scale / 3,              y),
                     wx.Point(x + scale / 3 + scale / 5, y + scale / 5)])
         
-def draw_fish_top_left(dc, x, y, cell_w, cell_h, p, b):  # Offset from top left corner
+def draw_fish_top_left(dc, size, x, y, cell_w, cell_h, p, b):  # Offset from top left corner
     scale = min(cell_w, cell_h)
     ox = scale / 3
     oy = scale / 5
-    draw_fish_center(dc, ox + x, oy + y, cell_w, cell_h, p, b)
+    draw_fish_center(dc, size, ox + x, oy + y, cell_w, cell_h, p, b)

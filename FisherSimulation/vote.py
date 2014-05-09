@@ -1,3 +1,8 @@
+"""
+The vote module contains classes that are concerned with the voting part of the 
+hearing phase.
+"""
+
 import decisions
 
 APPROVE = object()

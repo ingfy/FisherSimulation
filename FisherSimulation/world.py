@@ -1,11 +1,20 @@
+"""
+The world module contains implementations for elements regarding the geography 
+and contents of the world. This includes structure, and contents of map cells.
+"""
+
 import random
 import math
 import entities
 
 class Map(object):
-    _structure = None
-    
-    def __init__(self, structure, aquaculture_blocking_radius):
+    """
+    The map is the top-level entity, and it contains a structure which controls 
+    positioning. It defines many methods for accessing information stored in the 
+    structure, and for manipulating it.
+    """
+
+    def __init__(self, structure):
         self.set_structure(structure)
     
     def set_structure(self, structure):
@@ -43,9 +52,13 @@ class Map(object):
             
     def build_aquaculture(self, agent, cell):
         radius = self._structure.get_aquaculture_blocking(cell)
+        damage = self._structure.get_aquaculture_damage(cell)
         for b in radius:
             if not b == cell:
                 b.block()
+
+        for c in damage:
+            c.inflict_damage(damage[c])                
                 
         cell.build_aquaculture(agent)
         
@@ -81,6 +94,15 @@ class Slot(object):
         
     def is_land(self):
         return self._land
+        
+    def inflict_damage(self, damage):
+        """Inflicts damage on the cell's resource.
+        
+        Arguments:
+            damage  A floating-point number between 0 and 1 representing the
+                    proportional damage to be inflicted.
+        """
+        self._fish_quantity -= self._fish_quantity * damage
         
     def has_aquaculture(self):
         """Checks if the cell has aquaculture built on it.
@@ -141,9 +163,14 @@ class Slot(object):
         
 # Abstract Structure class
 class AbstractStructure(object):
-    def __init__(self, aquaculture_blocking_radius, neighborhood_type):
-        self.set_neighborhood_type(neighborhood_type)
-        self._aquaculture_blocking_radius = aquaculture_blocking_radius
+    def __init__(self, cfg):
+        self.set_neighborhood_type(cfg["neighbourhood type"])
+        self._aquaculture_blocking_radius = \
+            cfg.globals["aquaculture blocking radius"]
+        self._aquaculture_damage_radius = \
+            cfg.globals["aquaculture damage radius"]
+        self._aquaculture_damage_proportion = \
+            cfg.globals["aquaculture damage proportion"]
         
     def initialize_slots(self, width, height):
         raise NotImplementedError
@@ -170,13 +197,6 @@ class AbstractStructure(object):
         return self.get_position(
             lambda x, y: occupant is self.slots[x][y].get_occupant()
         )
-        
-    def get_distance(self, (a_x, a_y), (b_x, b_y)):
-        cell_x, cell_y = self.cell_size
-        return math.sqrt(
-            ((b_x - a_x) * cell_x) ** 2 + 
-            ((b_y - a_y) * cell_y) ** 2
-        )        
     
     def get_cell_distance(self, a, b):
         return self.get_distance(
@@ -190,6 +210,22 @@ class AbstractStructure(object):
             self.get_occupant_position(b)
         )
         
+    def get_aquaculture_damage(self, cell):
+        pos = self.get_cell_position(cell)
+        cells = self.get_radius(self._aquaculture_damage_radius, pos)
+        prop = self._aquaculture_damage_proportion
+        max = self._aquaculture_damage_radius
+        distances = {
+            c: self.get_distance(pos, self.get_cell_position(c)) for c in cells
+        }
+        damage = {
+            c: float(prop) * (max - distances[c]) / max for c in distances if 
+                distances[c] <= self._aquaculture_damage_radius
+        }
+        damage[cell] = float(prop)
+        return damage
+
+
     def get_aquaculture_blocking(self, cell):
         pos = self.get_cell_position(cell)
         return self.get_radius(self._aquaculture_blocking_radius, pos)
@@ -199,16 +235,21 @@ class AbstractStructure(object):
         return [(x, y) for y in xrange(0, len(self.slots)) for x in 
             xrange(0, len(self.slots[y]))]
             
+    def get_distance(self, (a_x, a_y), (b_x, b_y)):
+        """Returns a floating-point number representing the distance in meter
+           between the two positions."""
+        raise NotImplementedError()
+            
     def get_grid(self):
-        """ Returns all slots as grid corresponding to real-world layout """
+        """ Returns all slots as grid corresponding to real-world layout. """
         return self.slots
 
     def get_radius(self, r, pos):
-        """ Returns all slots in a radius of r meters """
+        """ Returns all slots in a radius of r meters. """
         raise NotImplementedError
         
     def get_size(self):
-        """ Return size in (width, height) format """
+        """ Return size in (width, height) format. """
         return (len(self.slots), len(self.slots[0]))
         
     def get_all_slots(self):
@@ -238,10 +279,7 @@ class AbstractStructure(object):
 # FishingStructure to hold general method for initializing good fishing spots
 class FishingStructure(AbstractStructure):
     def __init__(self, cfg, good_spot_frequency):
-        AbstractStructure.__init__(self, 
-            cfg["aquaculture blocking radius"], 
-            cfg["neighbourhood type"]
-        )
+        AbstractStructure.__init__(self, cfg)
         self.cell_size = (cfg["cell width"], cfg["cell height"])
         self.initialize_slots(cfg["width"], cfg["height"])
         self.initialize_fishing_spots(good_spot_frequency)
@@ -269,6 +307,13 @@ class GridStructure(FishingStructure):
     def in_bounds(self, x, y):
         w, h = self.get_size()
         return w > x >= 0 and h > y >= 0
+        
+    def get_distance(self, (a_x, a_y), (b_x, b_y)):
+        cell_x, cell_y = self.cell_size
+        return math.sqrt(
+            ((b_x - a_x) * cell_x) ** 2 + 
+            ((b_y - a_y) * cell_y) ** 2
+        )
         
     def get_radius(self, r, (x, y)):
         sx, sy = self.cell_size

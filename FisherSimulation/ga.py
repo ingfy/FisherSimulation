@@ -41,8 +41,6 @@ class Evolution(LearningMechanism):
         ) if a in self.agents] 
             # returns an ordered list of (phenotype, fitness, agent) tuples
         
-            
-        
         # keep elites
         elites, rest = fitnesses[:self._elitism], fitnesses[self._elitism:]
             # elites are left untouched
@@ -69,7 +67,7 @@ class Evolution(LearningMechanism):
         
         # Distribute new phenotypes to non-elite agents
         for (__, ___, a), p in zip(rest, new_phenotypes):
-            a.decision_mechanism = p
+            a.add_voting_mechanism(p)
     
     @staticmethod
     def rank_selection(sorted_phenotypes, num):
@@ -131,10 +129,7 @@ class Phenotype(object):
     
     @classmethod
     def from_genotype(c, genotype):
-        return c(genotype)        
-        
-    def fitness(self):
-        raise NotImplementedException()
+        return c(genotype)
     
 class Genotype(object):
     length = 0
@@ -164,17 +159,6 @@ class Genotype(object):
             c(first.genome[:point] + second.genome[point:]),
             c(second.genome[:point] + first.genome[point:])
         ) if random.random() < crossover_rate else (first, second)
-        
-# Abstract Decision Making Mechanism class        
-class DecisionMechanism(object):
-    def set_input_values(self, inputs):
-        raise NotImplementedException()
-        
-    def process(self):
-        raise NotImplementedException()
-        
-    def get_output_values(self):
-        raise NotImplementedException()
             
 # Concrete decision making
 

@@ -1,150 +1,143 @@
-from config import config
-import entities
-import world 
-import sys
-import agent
-import market
-import phases
-import directory
-import do
-import time
-import ga
-import multiprocessing
-import log
+"""Module for initializing and running the simulation."""
 
-class SimulationInfo(object):
-    def __init__(self, map, cfg, directory, market, agent_factory, 
-            aquaculture_spawner, learning_mechanisms, logger):
-        self.map = map
-        self.cfg = cfg
-        self.directory = directory
-        self.market = market
-        self.agent_factory = agent_factory
-        self.aquaculture_spawner = aquaculture_spawner
-        self.learning_mechanisms = learning_mechanisms
-        self.logger = logger
-        
+from collections import namedtuple
+
+from config import config
+from FisherSimulation import entities
+from FisherSimulation import world
+from FisherSimulation import market
+from FisherSimulation import phases
+from FisherSimulation import directory
+from FisherSimulation import do
+from FisherSimulation import log
 
 ## Simulation MAIN module ##
 class Simulation(object):
+    """Master class for setting up and stepping through the simulation."""
+
     def __init__(self):
         self._cfg = None
         self._round = None
-        
-    def get_default_config_filename(self):
-        return config.cfg_json_filename
-    
+
     def setup_config(self, filename=None):
+        """Loads the configuration and makes sure it is processed.
+
+        Arguments:
+            filename    The relative path (from project directory) of a
+                        configuration file.
+        """
         if not filename is None:
             cfg = config.load(varargs=None, filename=filename)
         else:
             cfg = config.load(varargs=None)
         self._cfg = cfg
-        
+
     def initialize(self):
+        """Initializes the map and entities in the simulation.
+
+        Returns:
+            A SimulationInfo instance from the do module, describing the
+            simulation properties.
+        """
+
         assert not self._cfg is None, \
             "Configuration not initiated. Run setup_config()"
-            
+
         logger = log.Logger.new()
-            
-        dir = directory.Directory()
-        agent_factory = entities.AgentFactory(dir, self._cfg)
-        
+
+        agent_directory = directory.Directory()
+        agent_factory = entities.AgentFactory(agent_directory, self._cfg)
+
         # Create government and municipality,
         # which are automatically registered
-        # to the directory by their 
+        # to the directory by their
         # constructors
         agent_factory.government()
         agent_factory.municipality()
-        
-        gs = self._cfg['world']['structure']['class'](
+
+        structure = self._cfg['world']['structure']['class'](
             self._cfg['world']['structure'],
             self._cfg['world']['good spot frequency']
         )
-        map = world.Map(gs, 
-            self._cfg['world']['structure']['aquaculture blocking radius']
-        )
-        map.populate_fishermen(
-            agent_factory, 
+        worldmap = world.Map(structure)
+        worldmap.populate_fishermen(
+            agent_factory,
             self._cfg['fisherman']['num']
         )
-        fishermen = dir.get_agents(type=entities.Fisherman)
+        fishermen = agent_directory.get_agents(type=entities.Fisherman)
         # Add voting mechanism
-        for a in fishermen:
+        for fisher in fishermen:
             self._cfg['fisherman']['voting mechanism class'].new(
-                a,
+                fisher,
                 self._cfg['fisherman'],
-                map
+                worldmap
             )
-        
+
         aquaculture_spawner = entities.AquacultureSpawner(
             self._cfg['aquaculture']['voting mechanism class'],
             self._cfg['aquaculture'],
             self._cfg["global"]["aquaculture in blocked"],
-            map
+            worldmap
         )
-        
+
         # Learning mechanisms
-        
+
         agent_types_config_name = {
             entities.Fisherman: "fisherman",
             entities.Aquaculture: "aquaculture",
             entities.Civilian: "civilian",
             entities.Tourist: "tourist",
             entities.Government: "government",
-            entities.Municipality: "municipality"            
+            entities.Municipality: "municipality"
         }
-        
+
         learning_mechanisms = {}
-        
+
         for entity in agent_types_config_name:
             name = agent_types_config_name[entity]
             if "learning mechanism" in self._cfg[name]:
                 learning = self._cfg[name]["learning mechanism"]["class"]
-                config = self._cfg[name]["learning mechanism"]
+                mechanism_config = self._cfg[name]["learning mechanism"]
                 learning_mechanisms[entity] = learning(
-                    dir.get_agents(type = entity),
-                    config
-                )        
-        
-        info = SimulationInfo(
-            map, 
-            self._cfg, 
-            dir, 
+                    agent_directory.get_agents(type=entity),
+                    mechanism_config
+                )
+
+        simulation_info = namedtuple("SimulationInfo", [
+            "map",
+            "cfg",
+            "directory",
+            "market",
+            "agent_factory",
+            "aquaculture_spawner",
+            "learning_mechanisms",
+            "logger"
+        ])
+
+        info = simulation_info(
+            worldmap,
+            self._cfg,
+            agent_directory,
             market.Market(),
-            agent_factory, 
+            agent_factory,
             aquaculture_spawner,
             learning_mechanisms,
             logger
         )
-                
-        self._round = phases.Round(info)
-        
-        return do.Simulation.from_simulation_info(info, self._cfg)
-        
-    def get_current_phase(self):
-        return self._round.current()
-    
-    def step(self):
-        result = self._round.next()
-        report = do.PhaseReport.from_step_result(result, 
-            self.get_current_phase())
-        #print '\n'.join([str(m) for m in report.messages])
-        return report
-    
-def main():
-    s = Simulation()
-    s.setup_config()
-    map = s.initialize()
-    result1 = s.step()
-    result2 = s.step()
-    result3 = s.step()
-    result4 = s.step()
-    result5 = s.step()
-    result6 = s.step()
-    result7 = s.step()
-    result8 = s.step()
-    return 0
 
-if __name__ == "__main__":
-    sys.exit(main())
+        self._round = phases.Round(info)
+
+        return do.Simulation.from_simulation_info(info, self._cfg)
+
+    def get_current_phase(self):
+        """Returns the current phase of the simulation."""
+        return self._round.current()
+
+    def step(self):
+        """Processes one step of the simulation.
+        Returns:
+            A do.PhaseReport instance describing the results of the phase.
+        """
+        result = self._round.next()
+        phase = self.get_current_phase()
+        return do.PhaseReport.from_step_result(result, phase)

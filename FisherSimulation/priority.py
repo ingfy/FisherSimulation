@@ -1,6 +1,18 @@
+"""
+Agent's motivations are driven by their priorities, which are implemented as 
+calculable entities. Priorities are calculated by picking attributes in a common 
+object for influences.
+"""
+
 import numpy
 
 class Influences(object):
+    """
+    All influences that can have an impact on an agent's priorities are included 
+    in this class. It has field for the agent, all agents, community member 
+    agents, the market, fishermen, the world map and aquaculture agents.
+    """
+    
     def __init__(self, 
             agent = None, 
             all_agents = None, 
@@ -29,6 +41,11 @@ class Influences(object):
         )
 
 class Priority(object):
+    """
+    A single priority is implemented by giving a calculating function to this 
+    class.
+    """
+
     # <dobule> calculate_value(...) should be implemented for all instances
     
     def __init__(self, name, calculate_value):

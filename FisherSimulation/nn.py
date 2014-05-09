@@ -1,3 +1,9 @@
+"""
+The neural networks module contains the implementation in
+the neural networks, employed by fishermen when deciding how to
+vote.
+"""
+
 import random
 import numpy
 
@@ -11,6 +17,12 @@ def convert_edge_tuples(edges, label_to_neuron, neurons):
     return out
 
 class LabeledNeuralNetwork(object):
+    """
+    This class implements the neural network itself. It takes parameters for a 
+    list of neurons in each layer (one input, one hidden and one output), and 
+    contains methods for updating the input, processing and retrieving the 
+    output.
+    """
 
     # Connectivity: (a, b, val)
     def __init__(self, inputs, outputs, hiddens, edges):
@@ -71,6 +83,11 @@ class LabeledNeuralNetwork(object):
         
         
 class Neuron(object):
+    """
+    Neurons are implemented through this class which stores the value and type 
+    of the neuron.
+    """
+
     HIDDEN = 0
     INPUT = 1
     OUTPUT = 2

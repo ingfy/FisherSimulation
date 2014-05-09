@@ -11,9 +11,9 @@ class Graphs(BufferedCanvas):
         wx.Colour(0, 0, 255),
         wx.Colour(255, 0, 255),
         wx.Colour(0, 255, 255),
-        wx.Colour(128, 127, 0),
-        wx.Colour(0, 127, 128),
-        wx.Colour(127, 0, 128)
+        wx.Colour(0, 128, 0),
+        wx.Colour(128, 0, 0),
+        wx.Colour(0, 0, 128)
     ]
 
     def __init__(self, parent, size):
