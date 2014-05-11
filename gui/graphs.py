@@ -15,6 +15,39 @@ class Graphs(BufferedCanvas):
         wx.Colour(128, 0, 0),
         wx.Colour(0, 0, 128)
     ]
+    
+    color_order = [
+        "planned aquaculture sites",
+        "average number of complaints",
+        "average fisherman capital",
+        "number of aquacultures",
+        "total fish quantity",
+        "average fisherman fitness"
+    ]
+    
+    data_point_scaling = {
+        "total fish quantity": {
+            "label": "*10",
+            "function": lambda e: e / 10
+        },
+        "number of aquacultures": {
+            "label": "*10",
+            "function": lambda e: e / 10
+        },
+        "average fisherman fitness": {
+            "label": "f: 20^f / 20",
+            "function": lambda e: 20**e / 20
+        },
+        "average number of complaints": {
+            "label": "*3",
+            "function": lambda e: e / 3
+        },
+        "planned aquaculture sites": {
+            "label": "*100",
+            "function": lambda e: e / 100
+        }
+    }
+    default_scaling = {"label": "", "function": lambda e: e}
 
     def __init__(self, parent, size):
         self.reset_data()
@@ -27,21 +60,30 @@ class Graphs(BufferedCanvas):
         self.update()
         
     def reset_data(self):
-        self._data = {}
-        self._assigned_colors = {}
+        self._data = {}        
         self._colors_iter = iter(Graphs.graph_colors)
+        self._assigned_colors = {
+            label: next(self._colors_iter, "black") 
+                for label in Graphs.color_order
+        }
+        self._scaling = {}
         
     def add_data_point(self, label, round, value, mode="add"):
         if not label in self._data:
             self._data[label] = {}
+        if not label in self._assigned_colors:
             self._assigned_colors[label] = next(self._colors_iter, "black")
+        if not label in self._scaling:
+            self._scaling[label] = Graphs.data_point_scaling.get(
+                label,
+                Graphs.default_scaling
+            )
         if not round in self._data[label]:
             self._data[label][round] = 0
         if mode == "add":
             self._data[label][round] += value
         else:
             self._data[label][round] = value
-        print label, round, self._data[label][round]
         
     def draw(self, dc):
         # draw axis
@@ -66,8 +108,15 @@ class Graphs(BufferedCanvas):
             num_v, num_h = Graphs.axis
             
             # can't plot variables with 0 or 1 values
-            data = {variable: self._data[variable] for variable in self._data if 
-                len(self._data[variable]) > 1}
+            data = {
+                variable: { 
+                    round:
+                        self._scaling[variable]["function"](
+                            self._data[variable][round]
+                        ) for round in self._data[variable]
+                    } for variable in self._data 
+                        if len(self._data[variable]) > 1
+            }
             
             values = [data[label][e] for label in data for e in data[label]]
             
@@ -152,6 +201,10 @@ class Graphs(BufferedCanvas):
                 dc.DrawLines(points, xoffset=graph_x, yoffset=graph_y+graph_h)
                 
             # Draw explanations
+            text = {
+                label: label + " " + self._scaling[label]["label"]
+                    for label in data
+            }
             num_expl = len(data)
             min_size, max_size = size_constraints = (6, 20)
             expl_h = h / 4
@@ -164,7 +217,7 @@ class Graphs(BufferedCanvas):
             expl_padding = 2
             expl_text_padding = 2
             expl_w = max(
-                w for w, h in [dc.GetTextExtent(label) for label in data]
+                w for w, h in [dc.GetTextExtent(text[label]) for label in data]
             ) + expl_box_w + expl_padding * 2 + expl_text_padding
             expl_x = w - expl_w
             expl_y = 0
@@ -186,8 +239,8 @@ class Graphs(BufferedCanvas):
                     expl_box_w, 
                     expl_box_h
                 )
-                __, th = dc.GetTextExtent(label)
-                dc.DrawText(label, 
+                __, th = dc.GetTextExtent(text[label])
+                dc.DrawText(text[label], 
                     expl_x + expl_padding + expl_box_w + expl_padding,
                     line_y - th/2)
             
@@ -195,4 +248,5 @@ class Graphs(BufferedCanvas):
             return True
             
         except Exception, e:
+            print e
             return False

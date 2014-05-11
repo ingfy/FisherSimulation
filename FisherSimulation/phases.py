@@ -147,9 +147,9 @@ class CoastalPlanning(Step):
             self.info.directory.get_government().get_approved_complaints()
         )
         
-        data["statistics"]["planned aquaculture sites *100"] = {
+        data["statistics"]["planned aquaculture sites"] = {
             "mode":  "set",
-            "value": len(plan.aquaculture_sites()) / 100.0
+            "value": float(len(plan.aquaculture_sites()))
         }
         
         return StepResult.no_cells_changed(self, self.info.map, data, round)
@@ -165,11 +165,11 @@ class Hearing(Step):
             )
             self.info.logger.add_vote(round, agent, 
                 len([v for v in votes[agent] if v.is_complaint()]))
-        data["statistics"]["average number of complaints * 3"] = {
+        data["statistics"]["average number of complaints"] = {
             "mode": "add",
             "value": numpy.mean(
                 [len([v for v in votes[a] if v.is_complaint()]) for a in votes]
-            ) / 3.0
+            )
         }
         return StepResult.votes_cast(self, self.info.map, data, 
             round, votes)
@@ -255,13 +255,13 @@ class Building(Step):
                 ))
                 
         cells = self.info.map.get_all_cells()
-        data["statistics"]["total fish quantity * 10"] = {
-            "value": sum(cell.get_fish_quantity() for cell in cells) / 10.0
+        data["statistics"]["total fish quantity"] = {
+            "value": float(sum(cell.get_fish_quantity() for cell in cells))
         }
-        data["statistics"]["number of aquacultures *10"] = {
-            "value": len(
+        data["statistics"]["number of aquacultures"] = {
+            "value": float(len(
                 self.info.directory.get_agents(type = entities.Aquaculture)
-            ) / 10.0
+            ))
         }
         return StepResult.cells_changed(self, affected_cells, self.info.map, 
             data, round)
@@ -298,10 +298,10 @@ class Learning(Step):
             
         # average of all fitnesses
         for t, l in [(entities.Fisherman, "fisherman")]:
-            data_dict["statistics"][u"average %s fitness f: 20^f / 20" % l] = {   # f: 20^f / 20
-                "value": 20**numpy.mean(
+            data_dict["statistics"][u"average %s fitness" % l] = {   # f: 20^f / 20
+                "value": numpy.mean(
                     [fitnesses[a] for a in fitnesses if a.__class__ == t]
-                ) / 20
+                )
             }
             
         # log fitness
