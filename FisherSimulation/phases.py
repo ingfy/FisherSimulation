@@ -40,6 +40,10 @@ class Round(object):
         
     def next(self):
         result = self._current_step.action(self._round_counter)
+        self.info.logger.add_phase_statistics(
+            self._round_counter, 
+            result.data.get("statistics", {})
+        )
         self._current_step = self._current_step.next()
         if self._current_step is None:
             self.new_round()
@@ -51,6 +55,7 @@ class Round(object):
             self.info.map, 
             self.info.directory.get_agents(type = entities.Aquaculture)
         )
+        self.info.logger.write_round(self._round_counter)
         self._round_counter += 1
         self._current_step = self._start
         # reset
@@ -210,6 +215,7 @@ class Fishing(Step):
             agents = self.info.directory.get_agents(type = t)
             if len(agents) > 0:
                 data["statistics"]["average %s capital" % l] = {
+                    "mode": "set",
                     "value":
                         numpy.mean(
                             [a.capital for a in agents]
@@ -292,10 +298,10 @@ class Learning(Step):
             
         # average of all fitnesses
         for t, l in [(entities.Fisherman, "fisherman")]:
-            data_dict["statistics"]["average %s fitness" % l] = {
-                "value": numpy.mean(
+            data_dict["statistics"][u"average %s fitness f: 20^f / 20" % l] = {   # f: 20^f / 20
+                "value": 20**numpy.mean(
                     [fitnesses[a] for a in fitnesses if a.__class__ == t]
-                )
+                ) / 20
             }
             
         # log fitness

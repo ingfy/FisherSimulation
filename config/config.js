@@ -22,7 +22,7 @@
         "good spot frequency": 0.1
     },
     "interface": {
-        "print messages": true
+        "print messages": false
     },
     "fisherman": {
         "num":        20,

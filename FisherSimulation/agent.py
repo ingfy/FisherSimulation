@@ -76,7 +76,7 @@ class VotingAgent(CommunicatingAgent):
         
 class WorkingAgent(object):
     def work(self):
-        raise NotImplementedException()
+        raise NotImplementedError()
         
 class PrioritizingAgent(object):
     def __init__(self):

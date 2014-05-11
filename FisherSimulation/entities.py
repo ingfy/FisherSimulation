@@ -268,6 +268,7 @@ class Fisherman(ProducedAgent):
         self.first_home = self.home #TODO:DELETE
         self.home.populate(self)
         self._fishing_efficiency = 1.0
+        self._max_fishing_output = 1.0 * self._fishing_efficiency
         self.slot_knowledge[home_cell] = home_cell.get_fishing_efficiency()
 
     def find_fishing_spot(self, world):

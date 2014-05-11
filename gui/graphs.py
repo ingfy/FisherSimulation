@@ -23,8 +23,7 @@ class Graphs(BufferedCanvas):
         self.SetBackgroundColour("white")
         
         self.BufferBmp = None
-        
-        
+                
         self.update()
         
     def reset_data(self):
@@ -42,6 +41,7 @@ class Graphs(BufferedCanvas):
             self._data[label][round] += value
         else:
             self._data[label][round] = value
+        print label, round, self._data[label][round]
         
     def draw(self, dc):
         # draw axis
