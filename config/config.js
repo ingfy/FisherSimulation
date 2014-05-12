@@ -3,7 +3,7 @@
         "num max complaints":               10,
         "max hearing rounds":               3,
         "aquaculture blocking radius":      25,
-        "aquaculture damage radius":        100,
+        "aquaculture damage radius":        50,
         "aquaculture damage proportion":    1,
         "aquaculture in blocked":           false
     },
@@ -84,7 +84,8 @@
         }
     },
     "government": {
-        "priorities": {},
+        "priorities":   {},
+        "num licenses": 5,
         "decision mechanism class": {
             "type": "class",
             "class": "FisherSimulation.dm.ApproveProbability"

@@ -239,7 +239,6 @@ class Building(Step):
         licenses = government.distribute_licenses()
         spawner = self.info.aquaculture_spawner
         plan = municipality.get_plan()
-        blocking_radius = 25
         affected_cells = []
         for license in licenses:
             location = spawner.choose_cell(plan)

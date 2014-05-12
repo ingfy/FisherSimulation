@@ -202,11 +202,11 @@ class Government(CommunicatingAgent, PrioritizingAgent):
         self._decision_mechanism = cfg["decision mechanism class"](cfg)
         self._licenses = []
         self.hearing_count = 0
+        self._num_licenses = cfg["num licenses"]
         self.max_hearing_count = 3
 
     def distribute_licenses(self):
-        num_licenses = 5
-        self._licenses = [License() for _ in xrange(num_licenses)]
+        self._licenses = [License() for _ in xrange(self._num_licenses)]
         return self._licenses
 
     def new_vote_round(self):
