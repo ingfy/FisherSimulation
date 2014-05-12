@@ -1,6 +1,7 @@
 # concrete files
 round_statistics.csv
 vfr.csv
+statistics.csv
 
 led / optimized / DLL files
 __pycache__/

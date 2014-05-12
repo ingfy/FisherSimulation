@@ -62,7 +62,7 @@ class Map(object):
                 
         cell.build_aquaculture(agent)
         
-        return radius
+        return radius + damage.keys()
         
     def get_radius_from(self, cell, r):
         return self.get_radius(r, self._structure.get_cell_position(cell))
