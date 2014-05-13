@@ -206,7 +206,8 @@ def handle_statistics(graphs, round, data):
         for label in data["statistics"]:
             mode = data["statistics"][label].get("mode", "add")
             value = data["statistics"][label].get("value")
-            graphs.add_data_point(label, round, value, mode)
+            if data["statistics"][label].get("plot", True):
+                graphs.add_data_point(label, round, value, mode)
     graphs.update()
 
 def create_and_run():
