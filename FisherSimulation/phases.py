@@ -37,9 +37,14 @@ class Round(object):
         })
         self._current_step = self._start = COASTPLAN
         self._round_counter = 0
+        self._step_counter = 0
         
     def next(self):
-        result = self._current_step.action(self._round_counter)
+        self._step_counter += 1
+        result = self._current_step.action(
+            self._round_counter, 
+            self._step_counter
+        )
         self.info.logger.add_phase_statistics(
             self._round_counter, 
             result.data.get("statistics", {})
@@ -56,6 +61,7 @@ class Round(object):
             self.info.directory.get_agents(type = entities.Aquaculture)
         )
         self.info.logger.write_round(self._round_counter)
+        self._step_counter = 0
         self._round_counter += 1
         self._current_step = self._start
         # reset
@@ -98,15 +104,15 @@ class Step(object):
         self._next = next
         self.name = name
 
-    def do(self, round):
+    def do(self, round, step):
         raise NotImplementedException()
 
     def next(self):
         return self._next
 
-    def action(self, round):
+    def action(self, round, step):
         self.info.directory.start_recording()
-        result = self.do(round)
+        result = self.do(round, step)
         result.messages = self.info.directory.stop_recording()
         return result
 
@@ -119,9 +125,9 @@ class DecisionStep(Step):
     def set_next_table(self, next_table):
         self._next_table = next_table
 
-    def action(self, round):
+    def action(self, round, step):
         self.info.directory.start_recording()
-        (result, decision) = self.do(round)
+        (result, decision) = self.do(round, step)
         self.decide(decision)
         result.messages = self.info.directory.stop_recording()
         return result
@@ -136,7 +142,7 @@ class DecisionStep(Step):
 ## Concrete Step Implementations ##
 
 class CoastalPlanning(Step):
-    def do(self, round):
+    def do(self, round, step):
         data = {"statistics": {}}
         
         for a in self.info.directory.get_agents():
@@ -155,7 +161,7 @@ class CoastalPlanning(Step):
         return StepResult.no_cells_changed(self, self.info.map, data, round)
     
 class Hearing(Step):
-    def do(self, round):
+    def do(self, round, step):
         data = {"statistics": {}}
         self.info.directory.get_government().new_vote_round()
         votes = {}
@@ -171,11 +177,18 @@ class Hearing(Step):
                 [len([v for v in votes[a] if v.is_complaint()]) for a in votes]
             )
         }
+        data["statistics"]["average number of complaints step %d" % step] = {
+            "mode": "set",
+            "value": numpy.mean(
+                [len([v for v in votes[a] if v.is_complaint()]) for a in votes]
+            ),
+            "plot": False
+        }
         return StepResult.votes_cast(self, self.info.map, data, 
             round, votes)
         
 class GovernmentDecision(DecisionStep):
-   def do(self, round):
+   def do(self, round, step):
         government = self.info.directory.get_government()
         decision = government.voting_decision()
         return (
@@ -184,7 +197,7 @@ class GovernmentDecision(DecisionStep):
         )
 
 class Fishing(Step):
-    def do(self, round):
+    def do(self, round, step):
         data = {"statistics": {}}
     
         # Agents do profit activities
@@ -232,7 +245,7 @@ class Fishing(Step):
             data, round)
         
 class Building(Step):
-    def do(self, round):
+    def do(self, round, step):
         data = {"statistics": {}}
         government = self.info.directory.get_government()
         municipality = self.info.directory.get_municipality()
@@ -266,7 +279,7 @@ class Building(Step):
             data, round)
         
 class Learning(Step):
-    def do(self, round):
+    def do(self, round, step):
         data_dict = {"average fitness": {}, "statistics": {}}
         
         dir = self.info.directory
