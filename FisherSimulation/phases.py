@@ -275,6 +275,10 @@ class Building(Step):
                 self.info.directory.get_agents(type = entities.Aquaculture)
             ))
         }
+        data["statistics"]["unblocked cells"] = {
+            "plot": False,
+            "value": float(sum(1 for e in cells if not e.is_blocked()))
+        }
         return StepResult.cells_changed(self, affected_cells, self.info.map, 
             data, round)
         
