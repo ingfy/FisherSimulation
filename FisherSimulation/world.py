@@ -161,10 +161,38 @@ class Slot(object):
         self._occupants = [agent]
         self._blocked = True
         
+class MapStructure(object):
+    """Interface showing methods that need to be implemented for a
+    map structure."""
+    
+    def get_cell_distance(self, a, b):
+        raise NotImplementedError()
+
+    def get_distance(self, pos_a, pos_b):
+        raise NotImplementedError()
+
+    def get_size(self): 
+        raise NotImplementedError()
+
+    def get_all_slots(self):
+        raise NotImplementedError()
+
+    def get_aquaculture_blocking(self, cell):
+        raise NotImplementedError()
+
+    def get_aquaculture_damage(self, cell):
+        raise NotImplementedError()
+
+    def get_cell_position(self, cell):
+        raise NotImplementedError()
+
+    def get_radius(self, r, pos):
+        raise NotImplementedError()
+        
 # Abstract Structure class
-class AbstractStructure(object):
+class AbstractStructure(MapStructure):
     def __init__(self, cfg):
-        self.set_neighborhood_type(cfg["neighbourhood type"])
+        # self.set_neighborhood_type(cfg["neighbourhood type"])
         self._aquaculture_blocking_radius = \
             cfg.globals["aquaculture blocking radius"]
         self._aquaculture_damage_radius = \
@@ -175,14 +203,14 @@ class AbstractStructure(object):
     def initialize_slots(self, width, height):
         raise NotImplementedError
         
-    def set_neighborhood_type(self, neighborhood_type):
-        try:
-            self.neighborhood = {
-                "von_neumann":    self.neighborhood_von_neumann,
-                "moore":          self.neighborhood_moore
-            }[neighborhood_type]
-        except NameError:
-            raise Exception("Undefined neighborhood type")
+    # def set_neighborhood_type(self, neighborhood_type):
+        # try:
+            # self.neighborhood = {
+                # "von_neumann":    self.neighborhood_von_neumann,
+                # "moore":          self.neighborhood_moore
+            # }[neighborhood_type]
+        # except NameError:
+            # raise Exception("Undefined neighborhood type")
             
     def get_position(self, fun):
         for (x, y) in self.get_coordinates_list():
@@ -246,7 +274,7 @@ class AbstractStructure(object):
 
     def get_radius(self, r, pos):
         """ Returns all slots in a radius of r meters. """
-        raise NotImplementedError
+        raise NotImplementedError()
         
     def get_size(self):
         """ Return size in (width, height) format. """
@@ -267,11 +295,11 @@ class AbstractStructure(object):
     def in_bounds(self, x, y):
         raise NotImplementedError
         
-    def neighborhood_von_neumann(self, x, y):
-        raise NotImplementedError
+    # def neighborhood_von_neumann(self, x, y):
+        # raise NotImplementedError
         
-    def neibhorhood_moore(self, x, y):
-        raise NotImplementedError        
+    # def neibhorhood_moore(self, x, y):
+        # raise NotImplementedError        
         
     def size(self):
         raise NotImplementedError
@@ -328,20 +356,35 @@ class GridStructure(FishingStructure):
     def _get_at_offsets(self, o, x, y):
         return self.get_positions_if_valid([(x + X, y + Y) for (X, Y) in o])
 
-    def neighborhood_moore(self, x, y):
-        offs = [(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)]
-        return self._get_at_offsets(offs)
+    # def neighborhood_moore(self, x, y):
+        # offs = [(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)]
+        # return self._get_at_offsets(offs)
 
-    def neighborhood_von_neumann(self, x, y):
-        return self._get_at_offsets([(1,0),(0,1),(-1,0),(0,-1)])
+    # def neighborhood_von_neumann(self, x, y):
+        # return self._get_at_offsets([(1,0),(0,1),(-1,0),(0,-1)])
 
 # TorusStructure represents a kind of grid structure that wraps around both
 # horizontally and vertically. That means the neighborhood and radius
 # methods are different from GridStructure.
-class TorusStructure(GridStructure):
+class TorusStructure(FishingStructure):
+    def in_bounds(self, x, y):
+        w, h = self.get_size()
+        return w > x >= 0 and h > y >= 0
+
     def _absolute(self, x, y):
         w, h = self.get_size()
         return (x % w, y % h)
+        
+    def get_distance(self, (a_x, a_y), (b_x, b_y)):
+        cell_x, cell_y = self.cell_size
+        w, h = self.get_size()
+        offsets = ((-w, -h), (-w, 0), (-w, h),
+                   (0, -h),  (0, 0),  (0, h), 
+                   (w, -h),  (w, 0),  (w, h))
+        return min(math.sqrt(
+            ((a_x - b_x + dx) * cell_x) ** 2 + 
+            ((a_y - b_y + dy) * cell_y) ** 2
+        ) for (dx, dy) in offsets)
     
     def get_radius(self, r, (x, y)):
         sx, sy = self.cell_size
@@ -354,12 +397,12 @@ class TorusStructure(GridStructure):
                 yy in xrange(1, r/sy + 1)] for e in subl]        
         return self._get_at_offsets(offsets, x, y)
         
-    def neighborhood_moore(self, x, y):
-        offs = [(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)]
-        return self._get_at_offsets(offs)
+    # def neighborhood_moore(self, x, y):
+        # offs = [(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)]
+        # return self._get_at_offsets(offs)
             
-    def neighborhood_moore(self, x, y):
-        return self._get_at_offsets([(1,0),(0,1),(-1,0),(0,-1)])
+    # def neighborhood_moore(self, x, y):
+        # return self._get_at_offsets([(1,0),(0,1),(-1,0),(0,-1)])
             
     def _get_at_offsets(self, o, x, y):
         return [self.slots[X][Y] for (X, Y) in
