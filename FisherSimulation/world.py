@@ -165,34 +165,135 @@ class MapStructure(object):
     """Interface showing methods that need to be implemented for a
     map structure."""
     
+    @classmethod
+    def create(cls, cfg, good_spot_frequency):
+        """Creates the map structure. May be overridden, or the implementing
+        subclass can have a constructor that takes the same arguments as this
+        function.
+        
+        Parameters:
+            cfg                 The configuration object for the structure
+            good_spot_frequency A floating-point number representing the
+                                probability of any one spot being good. Between
+                                0 and 1.
+                                
+        Returns:
+            An instance of the implementing class.
+        """
+        
+        return cls(cfg, good_spot_frequency)
+    
     def get_cell_distance(self, a, b):
+        """Finds the distance in meters between two given cells.
+        
+        Paraeters:
+            a   A Slot instance
+            b   Another Slot instance
+            
+        Returns:
+            A floating-point number representing the distance.
+        """
+        
         raise NotImplementedError()
 
     def get_distance(self, pos_a, pos_b):
+        """Finds the distance in meters between two given positions.
+        
+        Paraeters:
+            pos_a   A duple of two integers representing the first position
+            pos_b   Another duple for the second position
+            
+        Returns:
+            A floating-point number representing the distance.
+        """
+        
         raise NotImplementedError()
 
     def get_size(self): 
+        """Gives the size of the structure.
+        
+        Returns:
+            A duple of integers: (width, height).
+        """
+        
         raise NotImplementedError()
 
     def get_all_slots(self):
+        """Gives a list of all the Slot instances in the structure.
+        
+        Returns:
+            A list of Slot instances.
+        """
+        
         raise NotImplementedError()
 
     def get_aquaculture_blocking(self, cell):
+        """Gets all the cells that will or would be blocked by aquaculture
+        expansion in the given cell.
+        
+        The aquaculture blocking radius is given by the "aquaculture blocking
+        radius" field in cfg.globals.
+        
+        Attributes:
+            cell    The Slot where the aquaculture is being built
+            
+        Returns:
+            A list of Slot instances.
+        """
+    
         raise NotImplementedError()
 
     def get_aquaculture_damage(self, cell):
+        """Gets the cells damaged by aquaculture expansion in the given cell,
+        and the amount of damage sustained to them.
+        
+        The aquaculture damage proportion is given by the "aquaculture damage 
+        proportion" field in cfg.globals.
+        
+        The aquaculture damage radius is given by the "aquaculture damage 
+        radius" field in cfg.globals.
+        
+        Attributes:
+            cell    The Slot where aquaculture is being built.
+            
+        Returns:
+            A dictionary mapping cells to a floating-point number between 0 and 
+            1, representing the amount of damage, where 1 is completely 
+            destroyed and 0 is untouched.
+        """
+    
         raise NotImplementedError()
 
     def get_cell_position(self, cell):
+        """Gets the position of the given cell.
+        
+        Parameters:
+            cell    A Slot instance
+            
+        Returns:
+            A duple of integers representing the coordinate position of the 
+            cell.
+        """
+    
         raise NotImplementedError()
 
     def get_radius(self, r, pos):
+        """Gets all cells within the given radius of the given position.
+        
+        Paraeters:
+            r   An integer representing the radius in meters.
+            pos A duple of integers representing the coordinates of the 
+                position.
+                
+        Returns:
+            A list of all Slot instances within the radius.
+        """
+    
         raise NotImplementedError()
         
 # Abstract Structure class
 class AbstractStructure(MapStructure):
     def __init__(self, cfg):
-        # self.set_neighborhood_type(cfg["neighbourhood type"])
         self._aquaculture_blocking_radius = \
             cfg.globals["aquaculture blocking radius"]
         self._aquaculture_damage_radius = \
@@ -201,16 +302,7 @@ class AbstractStructure(MapStructure):
             cfg.globals["aquaculture damage proportion"]
         
     def initialize_slots(self, width, height):
-        raise NotImplementedError
-        
-    # def set_neighborhood_type(self, neighborhood_type):
-        # try:
-            # self.neighborhood = {
-                # "von_neumann":    self.neighborhood_von_neumann,
-                # "moore":          self.neighborhood_moore
-            # }[neighborhood_type]
-        # except NameError:
-            # raise Exception("Undefined neighborhood type")
+        raise NotImplementedError       
             
     def get_position(self, fun):
         for (x, y) in self.get_coordinates_list():
@@ -253,7 +345,6 @@ class AbstractStructure(MapStructure):
         damage[cell] = float(prop)
         return damage
 
-
     def get_aquaculture_blocking(self, cell):
         pos = self.get_cell_position(cell)
         return self.get_radius(self._aquaculture_blocking_radius, pos)
@@ -295,12 +386,6 @@ class AbstractStructure(MapStructure):
     def in_bounds(self, x, y):
         raise NotImplementedError
         
-    # def neighborhood_von_neumann(self, x, y):
-        # raise NotImplementedError
-        
-    # def neibhorhood_moore(self, x, y):
-        # raise NotImplementedError        
-        
     def size(self):
         raise NotImplementedError
 
@@ -322,15 +407,6 @@ class FishingStructure(AbstractStructure):
         for s in random.sample(slots, int(num_good_spots)):
             s.set_fish_spawning()        
 
-# GridStructure doc:
-#   populate_evenly(agents) :   Assumes that the structure has at
-#                               least as many slots as the number
-#                               of agents passed
-#   __init__(width, height) :   Defines the structure size
-#   size()                  :   Returns the size
-#   neighborhood(x, y)      :   Gets all the agents that neighbors
-#                               the given cell. Type of
-#                               neighborhood decided by structure.
 class GridStructure(FishingStructure):
     def in_bounds(self, x, y):
         w, h = self.get_size()
@@ -355,13 +431,6 @@ class GridStructure(FishingStructure):
             
     def _get_at_offsets(self, o, x, y):
         return self.get_positions_if_valid([(x + X, y + Y) for (X, Y) in o])
-
-    # def neighborhood_moore(self, x, y):
-        # offs = [(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)]
-        # return self._get_at_offsets(offs)
-
-    # def neighborhood_von_neumann(self, x, y):
-        # return self._get_at_offsets([(1,0),(0,1),(-1,0),(0,-1)])
 
 # TorusStructure represents a kind of grid structure that wraps around both
 # horizontally and vertically. That means the neighborhood and radius
@@ -396,13 +465,6 @@ class TorusStructure(FishingStructure):
                 xx in xrange(1, r/sx + 1) for 
                 yy in xrange(1, r/sy + 1)] for e in subl]        
         return self._get_at_offsets(offsets, x, y)
-        
-    # def neighborhood_moore(self, x, y):
-        # offs = [(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)]
-        # return self._get_at_offsets(offs)
-            
-    # def neighborhood_moore(self, x, y):
-        # return self._get_at_offsets([(1,0),(0,1),(-1,0),(0,-1)])
             
     def _get_at_offsets(self, o, x, y):
         return [self.slots[X][Y] for (X, Y) in

@@ -16,8 +16,7 @@
             "width":                       15,
             "height":                      15,
             "cell width":                  25,
-            "cell height":                 25,
-            "neighbourhood type":          "von_neumann"
+            "cell height":                 25
         },
         "good spot frequency": 0.1
     },

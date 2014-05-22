@@ -55,7 +55,7 @@ class Simulation(object):
         agent_factory.government()
         agent_factory.municipality()
 
-        structure = self._cfg['world']['structure']['class'](
+        structure = self._cfg['world']['structure']['class'].create(
             self._cfg['world']['structure'],
             self._cfg['world']['good spot frequency']
         )
