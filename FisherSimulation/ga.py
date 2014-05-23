@@ -10,10 +10,10 @@ import itertools
 import vote
 
 class LearningMechanism(object):
-    def __init__(self, agents):
+    def __init__(self, agents, cfg):
         self.agents = agents
         
-    def learn(self):
+    def learn(self, fitnesses):
         raise NotImplementedException()
         
 class EvolutionarySelectionPhenotype(object):
@@ -23,7 +23,7 @@ class EvolutionarySelectionPhenotype(object):
         
 class Evolution(LearningMechanism):
     def __init__(self, agents, cfg):
-        LearningMechanism.__init__(self, agents)
+        LearningMechanism.__init__(self, agents, cfg)
         config = EvolutionConfig.from_dict(cfg)
         self._phenotype = config.phenotype
         self._genotype = config.genotype

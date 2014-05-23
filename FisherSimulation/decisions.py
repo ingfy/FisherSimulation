@@ -12,6 +12,9 @@ class VotingDecisionMechanism(object):
         Arguments:
             agent:          The agent deciding the vote
             coastal_plan:   A plan.CoastalPlan instance
+            world_map:      A world.Map instance showing the current world 
+                            state.   
+            max_complaints: An integer giving the maximum number of complaints.
 
         Returns:
             A list of vote.Vote instances with APPROVE or DISAPPROVE values for
@@ -31,7 +34,7 @@ class VotingDecisionMechanism(object):
             add_voting_mechanism(mechanism)
 
         Arguments:
-            agents: A list of agents to add the mechanism to
+            agents: An agent to add the mechanism to
             config: The configuration object for the given agent,
                     for example cfg['fishermen'] if agents are fishermen.
             world:  The world instance
